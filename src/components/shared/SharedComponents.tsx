@@ -1,12 +1,12 @@
 import type { StatCardProps } from "@/types";
 
-export function StatCard({ title, value, icon, color, trend, change, href }: StatCardProps) {
+export function StatCard({ title, value, icon, color, trend, change }: StatCardProps) {
   const trendIcon = trend === "up" ? "↑" : trend === "down" ? "↓" : "→";
   const trendColor =
     trend === "up" ? "text-green-500" : trend === "down" ? "text-red-500" : "text-gray-400";
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800 hover:shadow-md transition-shadow cursor-pointer">
+    <div className="dashboard-card dashboard-card-enter bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800 cursor-pointer">
       <div className="flex items-start justify-between mb-3">
         <span className="text-2xl">{icon}</span>
         <div
@@ -77,7 +77,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={`bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 ${className}`}>
+    <div className={`surface-card bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 ${className}`}>
       {children}
     </div>
   );

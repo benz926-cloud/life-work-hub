@@ -54,6 +54,7 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
@@ -63,11 +64,21 @@ export default function RootLayout({
           media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)"
           href="/icons/apple-icon-180.png"
         />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)"
+          href="/icons/apple-icon-180.png"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)"
+          href="/icons/apple-icon-180.png"
+        />
         {/* iOS standalone mode detection - prevents PWA from opening links in Safari */}
         <meta name="format-detection" content="telephone=no" />
         <meta name="format-detection" content="date=no" />
       </head>
-      <body className="h-full bg-gray-50 text-gray-900 overflow-x-hidden">
+      <body className="h-full overflow-x-hidden bg-gray-50 text-gray-900 dark:bg-slate-950 dark:text-slate-100">
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
