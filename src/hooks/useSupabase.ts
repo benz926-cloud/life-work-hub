@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import type {
   InboxItem,
   Approval,
@@ -32,7 +32,7 @@ function useTable<T>(tableName: string) {
 
   const list = useCallback(async (userId?: string): Promise<T[]> => {
     if (!ready) return [];
-    const q = supabase.from(tableName).select("*");
+    const q = getSupabase().from(tableName).select("*");
     if (userId) q.eq("user_id", userId);
     const { data, error } = await q;
     if (error) { console.error(`[DB] ${tableName}.list:`, error); return []; }
@@ -41,7 +41,7 @@ function useTable<T>(tableName: string) {
 
   const getById = useCallback(async (id: string): Promise<T | null> => {
     if (!ready) return null;
-    const { data, error } = await supabase.from(tableName).select("*").eq("id", id).single();
+    const { data, error } = await getSupabase().from(tableName).select("*").eq("id", id).single();
     if (error) { console.error(`[DB] ${tableName}.get:`, error); return null; }
     return data as T;
   }, [tableName, ready]);
@@ -49,21 +49,21 @@ function useTable<T>(tableName: string) {
   const insert = useCallback(async (record: Partial<T>): Promise<T | null> => {
     if (!ready) return null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await supabase.from(tableName).insert(record as any).select().single();
+    const { data, error } = await getSupabase().from(tableName).insert(record as any).select().single();
     if (error) { console.error(`[DB] ${tableName}.insert:`, error); return null; }
     return data as T;
   }, [tableName, ready]);
 
   const update = useCallback(async (id: string, updates: Partial<T>): Promise<T | null> => {
     if (!ready) return null;
-    const { data, error } = await supabase.from(tableName).update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id).select().single();
+    const { data, error } = await getSupabase().from(tableName).update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id).select().single();
     if (error) { console.error(`[DB] ${tableName}.update:`, error); return null; }
     return data as T;
   }, [tableName, ready]);
 
   const remove = useCallback(async (id: string): Promise<boolean> => {
     if (!ready) return false;
-    const { error } = await supabase.from(tableName).delete().eq("id", id);
+    const { error } = await getSupabase().from(tableName).delete().eq("id", id);
     return !error;
   }, [tableName, ready]);
 

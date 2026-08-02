@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 interface AuthState {
   user: User | null;
@@ -28,14 +28,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Get initial session
+    const supabase = getSupabase();
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
@@ -48,27 +48,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabaseReady]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    if (!supabaseReady) return { error: "Supabase not configured" };
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
-  }, [supabaseReady]);
+    try {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        console.error("[Auth] signIn error:", error.message);
+        return { error: error.message };
+      }
+      console.log("[Auth] signIn success, user:", data.user?.email);
+      return { error: null };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "登录失败，请重试";
+      console.error("[Auth] signIn exception:", msg);
+      return { error: msg };
+    }
+  }, []);
 
   const signUp = useCallback(async (email: string, password: string, name: string) => {
-    if (!supabaseReady) return { error: "Supabase not configured" };
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { name } },
-    });
-    return { error: error?.message ?? null };
-  }, [supabaseReady]);
+    try {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { name } },
+      });
+      if (error) {
+        console.error("[Auth] signUp error:", error.message);
+        return { error: error.message };
+      }
+      console.log("[Auth] signUp success, user:", data.user?.email);
+      return { error: null };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "注册失败，请重试";
+      console.error("[Auth] signUp exception:", msg);
+      return { error: msg };
+    }
+  }, []);
 
   const signOut = useCallback(async () => {
-    if (!supabaseReady) return;
-    await supabase.auth.signOut();
+    try {
+      const supabase = getSupabase();
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("[Auth] signOut error:", err);
+    }
     setUser(null);
     setSession(null);
-  }, [supabaseReady]);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, supabaseReady }}>

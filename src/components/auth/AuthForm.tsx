@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { Mail, Lock, User, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Loader2, Sparkles, AlertCircle, CheckCircle } from "lucide-react";
 
 interface AuthFormProps {
   mode: "login" | "signup";
@@ -12,7 +12,6 @@ interface AuthFormProps {
 export function AuthForm({ mode }: AuthFormProps) {
   const { signIn, signUp, supabaseReady } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -22,43 +21,48 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return; // Prevent double submission
+
     setError("");
     setSuccess("");
     setLoading(true);
 
-    const result = mode === "login"
-      ? await signIn(email, password)
-      : await signUp(email, password, name);
+    try {
+      const result =
+        mode === "login"
+          ? await signIn(email, password)
+          : await signUp(email, password, name);
 
-    setLoading(false);
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
 
-    if (result.error) {
-      setError(result.error);
-      return;
+      if (mode === "signup") {
+        setSuccess("注册成功！请查看邮箱中的确认链接完成验证。");
+        setLoading(false);
+        return;
+      }
+
+      // Login success → redirect to home
+      router.push("/");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "发生未知错误，请重试";
+      setError(msg);
+      setLoading(false);
     }
-
-    if (mode === "signup") {
-      setSuccess("注册成功！请查看邮箱中的确认链接完成验证。");
-      return;
-    }
-
-    // Login success → redirect to dashboard
-    const next = searchParams.get("next") ?? "/";
-    router.push(next);
   };
 
   if (!supabaseReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <Sparkles className="mx-auto mb-4 text-blue-500" size={40} />
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Supabase 未配置</h2>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            请在 <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-blue-600">.env.local</code> 中填入
-            NEXT_PUBLIC_SUPABASE_URL 和 NEXT_PUBLIC_SUPABASE_ANON_KEY
-          </p>
-          <p className="mt-3 text-sm text-gray-400">
-            目前使用 Mock 数据模式运行
+      <div className="min-h-dvh flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center border border-gray-100">
+          <Sparkles className="mx-auto mb-4 text-amber-400" size={40} />
+          <h2 className="text-lg font-semibold text-gray-800">尚未连接 Supabase</h2>
+          <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+            请在 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-blue-600 text-xs">.env.local</code>{" "}
+            中配置 Supabase 项目信息后重启服务
           </p>
         </div>
       </div>
@@ -66,83 +70,81 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 sm:p-6 pb-24">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 max-w-md w-full">
+    <div className="min-h-dvh flex items-center justify-center p-4 sm:p-6 pb-24">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 sm:p-10 max-w-sm w-full">
         {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 bg-blue-100 dark:bg-blue-900/30 rounded-2xl mb-3 sm:mb-4">
-            <Sparkles className="text-blue-600 dark:text-blue-400" size={26} />
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl mb-4">
+            <Sparkles className="text-blue-600" size={24} />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
             {mode === "login" ? "欢迎回来" : "创建账号"}
           </h1>
-          <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-            {mode === "login" ? "登录您的 Life Work Hub" : "开始构建您的 AI 生活工作台"}
+          <p className="mt-1.5 text-sm text-gray-500">
+            {mode === "login" ? "登录 Life Work Hub" : "开始构建您的 AI 工作台"}
           </p>
         </div>
 
-        {/* Error / Success */}
+        {/* Feedback */}
         {error && (
-          <div className="mb-4 p-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-xs sm:text-sm text-red-700 dark:text-red-400 break-words">
-            {error}
+          <div className="mb-5 flex items-start gap-2.5 p-3 bg-red-50 border border-red-100 rounded-xl">
+            <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={16} />
+            <p className="text-sm text-red-700 leading-relaxed">{error}</p>
           </div>
         )}
         {success && (
-          <div className="mb-4 p-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-xs sm:text-sm text-green-700 dark:text-green-400 break-words">
-            {success}
+          <div className="mb-5 flex items-start gap-2.5 p-3 bg-green-50 border border-green-100 rounded-xl">
+            <CheckCircle className="text-green-500 shrink-0 mt-0.5" size={16} />
+            <p className="text-sm text-green-700 leading-relaxed">{success}</p>
           </div>
         )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "signup" && (
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 姓名
               </label>
-              <div className="relative flex items-center">
-                <div className="absolute left-3.5 flex items-center justify-center pointer-events-none">
-                  <User className="text-gray-400 shrink-0" size={18} />
-                </div>
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="你的名字"
                   required
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                  disabled={loading}
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition disabled:opacity-60"
                 />
               </div>
             </div>
           )}
 
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               邮箱
             </label>
-            <div className="relative flex items-center">
-              <div className="absolute left-3.5 flex items-center justify-center pointer-events-none">
-                <Mail className="text-gray-400 shrink-0" size={18} />
-              </div>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
                 required
-                className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                disabled={loading}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition disabled:opacity-60"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               密码
             </label>
-            <div className="relative flex items-center">
-              <div className="absolute left-3.5 flex items-center justify-center pointer-events-none">
-                <Lock className="text-gray-400 shrink-0" size={18} />
-              </div>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="password"
                 value={password}
@@ -150,22 +152,26 @@ export function AuthForm({ mode }: AuthFormProps) {
                 placeholder="至少 6 位字符"
                 minLength={6}
                 required
-                className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                disabled={loading}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition disabled:opacity-60"
               />
             </div>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-1">
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm"
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl font-semibold text-sm transition-colors"
             >
               {loading ? (
-                <Loader2 className="animate-spin" size={18} />
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  <span>{mode === "login" ? "登录中..." : "注册中..."}</span>
+                </>
               ) : (
                 <>
-                  {mode === "login" ? "登录" : "创建账号"}
+                  <span>{mode === "login" ? "登录" : "创建账号"}</span>
                   <ArrowRight size={16} />
                 </>
               )}
@@ -173,19 +179,19 @@ export function AuthForm({ mode }: AuthFormProps) {
           </div>
         </form>
 
-        {/* Toggle mode */}
-        <p className="mt-6 text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+        {/* Toggle */}
+        <p className="mt-6 text-center text-sm text-gray-500">
           {mode === "login" ? (
             <>
               还没有账号？{" "}
-              <a href="/auth/signup" className="text-blue-600 hover:underline font-medium">
+              <a href="/auth/signup" className="text-blue-600 hover:text-blue-700 font-medium transition">
                 注册
               </a>
             </>
           ) : (
             <>
               已有账号？{" "}
-              <a href="/auth/login" className="text-blue-600 hover:underline font-medium">
+              <a href="/auth/login" className="text-blue-600 hover:text-blue-700 font-medium transition">
                 登录
               </a>
             </>
