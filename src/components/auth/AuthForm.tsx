@@ -94,66 +94,72 @@ export function AuthForm({ mode }: AuthFormProps) {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-3.5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "signup" && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
                 姓名
               </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 shrink-0" size={16} />
+              <div className="relative flex items-center">
+                <div className="absolute left-3.5 flex items-center justify-center pointer-events-none">
+                  <User className="text-gray-400 shrink-0" size={18} />
+                </div>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="你的名字"
                   required
-                  className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white placeholder:text-gray-400"
+                  className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 />
               </div>
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
               邮箱
             </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 shrink-0" size={16} />
+            <div className="relative flex items-center">
+              <div className="absolute left-3.5 flex items-center justify-center pointer-events-none">
+                <Mail className="text-gray-400 shrink-0" size={18} />
+              </div>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
                 required
-                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white placeholder:text-gray-400"
+                className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
               密码
             </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 shrink-0" size={16} />
+            <div className="relative flex items-center">
+              <div className="absolute left-3.5 flex items-center justify-center pointer-events-none">
+                <Lock className="text-gray-400 shrink-0" size={18} />
+              </div>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="至少6位"
+                placeholder="至少 6 位字符"
                 minLength={6}
                 required
-                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white placeholder:text-gray-400"
+                className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
               />
             </div>
           </div>
 
-          <div className="pt-1">
+          <div className="pt-2">
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl font-medium text-sm transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm"
             >
               {loading ? (
                 <Loader2 className="animate-spin" size={18} />
@@ -168,7 +174,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         </form>
 
         {/* Toggle mode */}
-        <p className="mt-5 text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-6 text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
           {mode === "login" ? (
             <>
               还没有账号？{" "}
