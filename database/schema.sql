@@ -345,7 +345,7 @@ CREATE POLICY "Users own data" ON finance_records FOR ALL USING (auth.uid() = us
 CREATE POLICY "Users own data" ON savings_goals FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users own data" ON family_members FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users own data" ON health_records FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users own data" ON child_growth_records FOR ALL USING (auth.uid() = family_member_id IN (SELECT id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Users own data" ON child_growth_records FOR ALL USING (family_member_id IN (SELECT id FROM family_members WHERE user_id = auth.uid()));
 CREATE POLICY "Users own data" ON checkin_habits FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users own data" ON checkin_records FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users own data" ON approvals FOR ALL USING (auth.uid() = user_id);
