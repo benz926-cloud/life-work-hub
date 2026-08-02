@@ -1,0 +1,163 @@
+/**
+ * AI 管线冒烟测试：用 mock-data 跑一遍全部引擎，
+ * 断言输出结构与 UI 现有渲染契约兼容。
+ * 运行：npx tsx scripts/smoke-ai.ts
+ */
+import {
+  mockInboxItems, mockContentFeeds, mockSubscriptionRules, mockWardrobeItems,
+  mockOutfits, mockFinanceRecords, mockSavingsGoals, mockGrowthRecords,
+  mockFamilyMembers, mockTravelPlans,
+} from "@/lib/mock-data";
+import { parseIntentLocal } from "@/lib/ai/intent";
+import { rankContentLocal } from "@/lib/ai/content";
+import { recommendOutfitsLocal } from "@/lib/ai/outfit";
+import { analyzeFinance, categorizeTransaction } from "@/lib/ai/finance";
+import { analyzeGrowth } from "@/lib/ai/growth";
+import { generateTravelLocal, toTravelPlan, checklistProgress } from "@/lib/ai/travel";
+import { buildUserContext } from "@/hooks/useAI";
+
+let failed = 0;
+function assert(cond: boolean, msg: string) {
+  if (!cond) { failed++; console.error("  ✗ " + msg); } else { console.log("  ✓ " + msg); }
+}
+const NOW = new Date("2026-08-02T12:00:00+08:00");
+
+console.log("\n===== 1. 意图解析 =====");
+const cases: [string, string][] = [
+  ["准备下周一部门汇报PPT，需要Q2数据", "task"],
+  ["买一双跑步鞋，Nike Pegasus或者亚瑟士", "shopping"],
+  ["如果做一个AI穿搭App，核心功能应该是衣柜数字化+智能匹配", "inspiration"],
+  ["帮我调研大理5天4晚亲子游行程", "ai_processing"],
+  ["朵朵秋季开学需要准备的学习用品清单", "task"],
+  ["关注Sora视频生成技术最新进展", "inspiration"],
+  ["添加任务：8月5日前交报销单", "task"],
+  ["明天下午3点前把合同发给张伟经理", "task"],
+];
+for (const [text, expect] of cases) {
+  const r = parseIntentLocal(text, NOW);
+  const d = r.data;
+  const okCat = d.category === expect;
+  console.log(`  [${okCat ? "✓" : "✗"}] "${text.slice(0, 22)}" → ${d.category}(期望${expect}) p=${d.priority} due=${d.entities.dueDate ?? "-"} tags=${d.entities.tags.join(",") || "-"} conf=${r.confidence.toFixed(2)}`);
+  if (!okCat) failed++;
+}
+const dateCase = parseIntentLocal("下周一要交材料", NOW).data.entities;
+assert(dateCase.dueDate === "2026-08-03", `「下周一」(2026-08-02 是周日) → ${dateCase.dueDate}，期望 2026-08-03`);
+assert(parseIntentLocal("报销2800元差旅费", NOW).data.entities.amount === 2800, "金额抽取 2800");
+
+console.log("\n===== 2. 内容评分 =====");
+const ctx = buildUserContext({
+  trip: { destination: mockTravelPlans[0].destination, start_date: mockTravelPlans[0].start_date },
+  familyMembers: mockFamilyMembers,
+  childTopics: ["开学", "钢琴"],
+  workTopics: ["AI", "产线"],
+  learningGoals: ["英语"],
+  now: NOW,
+});
+const ranked = rankContentLocal(mockContentFeeds, mockSubscriptionRules, { ctx, now: NOW });
+ranked.data.forEach((r, i) => {
+  console.log(`  ${i + 1}. [${r.score}] ${r.verdict.padEnd(13)} ${r.feed.title.slice(0, 24)} | ${r.why}${r.actionable ? ` → ${r.actionable}` : ""}`);
+});
+assert(ranked.data.length === mockContentFeeds.length, "全部内容都被评分");
+assert(ranked.data[0].score >= ranked.data[ranked.data.length - 1].score, "首条得分不低于末条");
+const dali = ranked.data.find((r) => r.feed.title.includes("大理"))!;
+assert(dali.breakdown.情境相关 >= 60, `大理攻略因行程临近获得情境加分（${dali.breakdown.情境相关}）`);
+const bp = ranked.data.find((r) => r.feed.title.includes("高血压"))!;
+assert(bp.breakdown.情境相关 >= 60, `高血压内容因家人病史获得加分（${bp.breakdown.情境相关}）`);
+assert(new Set(ranked.data.slice(0, 3).map((r) => r.category)).size >= 3, "前三条类目不重复（多样性重排生效）");
+
+console.log("\n===== 3. 穿搭推荐 =====");
+const outfits = recommendOutfitsLocal(mockWardrobeItems, {
+  temperature: 32, weather: "晴", occasion: "casual", date: NOW, recentOutfits: mockOutfits,
+}, 3);
+outfits.data.forEach((c, i) => {
+  console.log(`  ${i + 1}. [${c.score}] ${c.items.map((x) => x.name).join(" + ")}`);
+  console.log(`     ${c.note}`);
+  if (c.warnings.length) console.log(`     ⚠ ${c.warnings.join("；")}`);
+});
+assert(outfits.data.length > 0, "32°C 夏季能生成推荐");
+assert(outfits.data[0].items.some((i) => i.type === "top") && outfits.data[0].items.some((i) => i.type === "bottom") && outfits.data[0].items.some((i) => i.type === "shoes"), "夏季槽位 = 上衣+下装+鞋");
+assert(!outfits.data[0].items.some((i) => i.type === "outerwear"), "32°C 不应推荐外套");
+const winter = recommendOutfitsLocal(mockWardrobeItems, { temperature: 3, occasion: "work", date: new Date("2026-01-10") }, 2);
+console.log(`  冬季通勤 3°C → ${winter.data[0]?.items.map((x) => x.name).join(" + ") ?? "无"}`);
+assert(Boolean(winter.data[0]?.items.some((i) => i.type === "outerwear")), "3°C 应包含外套");
+
+console.log("\n===== 4. 理财分析 =====");
+console.log("  自动分类：");
+for (const r of mockFinanceRecords.filter((r) => r.type === "expense")) {
+  const g = categorizeTransaction(r.description, r.amount);
+  console.log(`    ${r.description.padEnd(10)} → ${g.category} (现:${r.category}) conf=${g.confidence.toFixed(2)}`);
+}
+const fin = analyzeFinance(mockFinanceRecords, mockSavingsGoals, { monthlyBudget: 10000, now: NOW });
+const f = fin.data;
+console.log(`  周期 ${f.period}｜收入 ${f.totals.income} 支出 ${f.totals.expense} 结余 ${f.totals.net} 储蓄率 ${(f.totals.savingsRate * 100).toFixed(1)}%`);
+console.log(`  健康分 ${f.healthScore}｜预算风险 ${f.budget.risk}｜月末预测 ¥${f.budget.projected}`);
+console.log(`  类目：${f.byCategory.map((c) => `${c.label} ${c.amount}(${c.pct.toFixed(0)}%)`).join(" / ")}`);
+f.recommendations.forEach((r) => console.log(`    ${r.icon} [${r.severity}] ${r.title} — ${r.detail}`));
+assert(f.totals.expense === 4588, `2026-08 支出合计 = 4588（实得 ${f.totals.expense}）—— 注意现有 FinancePage 是把所有月份混加成 4677`);
+assert(f.totals.incomeIsEstimated && f.totals.income === 30000, "本期无收入记录 → 按历史月均 30000 估算");
+assert(f.budget.projectionConfidence === "low", "8月2日只过了 2 天 → 预测置信度 low");
+assert(f.budget.projected < 20000, `月末预测已剔除刚性支出的重复外推（实得 ¥${f.budget.projected}）`);
+assert(f.byCategory[0].category === "housing", "住房是最大支出类目");
+assert(f.rigidSplit.fixed >= 3800, "房贷被划入刚性支出");
+assert(f.goals.length === 2 && f.goals[0].monthlyNeed > 0, "储蓄目标已测算每月应存");
+assert(f.healthScore >= 0 && f.healthScore <= 100, "健康分在 0~100");
+
+console.log("\n===== 5. 孩子成长 =====");
+const before = JSON.stringify(mockGrowthRecords);
+const growth = analyzeGrowth(mockGrowthRecords, mockFamilyMembers.find((m) => m.role === "child"));
+const g = growth.data;
+console.log(`  ${g.headline}`);
+g.sections.forEach((s) => console.log(`    【${s.title}】${s.text}`));
+g.suggestions.forEach((s) => console.log(`    · ${s}`));
+assert(before === JSON.stringify(mockGrowthRecords), "未就地修改入参数组（原组件 reverse() 的坑）");
+assert(g.metrics[0].delta === 2, `身高变化 +2cm（实得 ${g.metrics[0].delta}）`);
+assert(g.metrics[0].velocity !== null && g.metrics[0].velocity > 10, `年化生长速度已计算（${g.metrics[0].velocity} cm/年）`);
+const piano = g.subjects.find((s) => s.subject === "钢琴")!;
+assert(piano.scale === "level", "钢琴 3 被识别为等级制而非百分制");
+assert(g.subjects.find((s) => s.subject === "数学")!.delta === 3, "数学 +3 分");
+assert(g.disclaimer.includes("不构成医学"), "免责声明存在");
+assert(!JSON.stringify(g).match(/正常|异常|偏矮|超重/), "文案未出现诊断性词汇");
+
+console.log("\n===== 6. 旅行攻略 =====");
+const travel = generateTravelLocal({
+  destination: "大理",
+  startDate: "2026-08-14",
+  endDate: "2026-08-18",
+  travelers: mockFamilyMembers,
+  budget: 15000,
+  pace: "balanced",
+});
+const t = travel.data;
+console.log(`  ${t.destination} ${t.days} 天`);
+t.itinerary.days.forEach((d) => console.log(`    D${d.day} ${d.title}（${d.area ?? "-"}）：${d.activities.join("、")}`));
+console.log(`  提示：${t.itinerary.tips.join("；")}`);
+console.log(`  清单：证件${t.checklist.documents.length} 衣物${t.checklist.clothing.length} 儿童${t.checklist.kids.length} 其他${t.checklist.other.length}`);
+console.log(`  预算：${t.budgetBreakdown?.map((b) => `${b.label}¥${b.amount}`).join(" / ")}｜人均每天 ¥${t.perPersonPerDay}`);
+if (t.warnings.length) console.log(`  ⚠ ${t.warnings.join("；")}`);
+assert(t.days === 5, `天数 = 5（实得 ${t.days}）`);
+assert(t.itinerary.days.length === 5, "生成 5 天行程");
+assert(t.itinerary.days[0].activities[0].includes("抵达"), "D1 含抵达缓冲");
+assert(t.itinerary.days[4].activities.some((a) => a.includes("返程")), "末日含返程");
+assert(t.checklist.kids.length > 0, "有 7 岁孩子 → 生成儿童清单");
+assert(t.checklist.other.some((i) => i.name.includes("长辈")), "有 68 岁长辈 → 生成长辈用药项");
+assert(!t.itinerary.days.some((d) => d.activities.some((a) => a.includes("洗马潭"))), "高强度徒步已因长辈同行被过滤");
+
+// 与 UI 渲染契约的结构一致性
+const plan = toTravelPlan(t, { destination: "大理", startDate: "2026-08-14", endDate: "2026-08-18" }, "u1");
+const it = plan.itinerary as { days: { day: number; title: string; activities: string[] }[] };
+const cl = plan.checklist as Record<string, { name: string; done: boolean }[]>;
+assert(Array.isArray(it.days) && typeof it.days[0].day === "number" && Array.isArray(it.days[0].activities),
+  "itinerary 结构与 TravelPlan.tsx 渲染契约一致（days[].day/title/activities[]）");
+assert(["documents", "clothing", "kids", "other"].every((k) => Array.isArray(cl[k]) && (cl[k].length === 0 || typeof cl[k][0].done === "boolean")),
+  "checklist 结构与 TravelPlan.tsx 渲染契约一致（分组 → {name,done}[]）");
+console.log(`  清单完成度：${checklistProgress(t.checklist).pct}%`);
+
+console.log("\n===== 收件箱 mock 回归（现有数据能否被正确重分类）=====");
+for (const item of mockInboxItems) {
+  const r = parseIntentLocal(item.content, NOW).data;
+  const flag = r.category === item.category ? "✓" : "≠";
+  console.log(`  ${flag} ${item.content.slice(0, 24)} → ${r.category} (mock: ${item.category})`);
+}
+
+console.log(`\n${failed === 0 ? "✅ 全部通过" : `❌ ${failed} 项失败`}\n`);
+process.exit(failed === 0 ? 0 : 1);
