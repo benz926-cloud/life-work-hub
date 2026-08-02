@@ -24,8 +24,9 @@
 - **框架**：Next.js 16 (Turbopack) + TypeScript
 - **样式**：Tailwind CSS
 - **图标**：Lucide React
-- **数据库**：Supabase (PostgreSQL，待接入)
-- **PWA**：manifest.json + Service Worker + iOS 全屏支持
+- **数据库**：Supabase (PostgreSQL，已接入 — 20+ 张表，Auth 已启用)
+- **认证**：Supabase Auth (email/password)，AuthContext + 客户端路由守卫
+- **PWA**：manifest.json + Service Worker（离线缓存）
 - **部署目标**：Vercel / EdgeOne Pages + Supabase
 
 ## 项目结构
@@ -49,11 +50,14 @@ life-work-hub/
 │   │   ├── health/             # 打卡
 │   │   └── shared/             # 通用组件 + 设置页
 │   ├── lib/
-│   │   ├── mock-data.ts        # 全模块 Mock 数据
-│   │   ├── navigation.ts       # 侧边栏导航配置
-│   │   └── supabase.ts         # Supabase 客户端（待接入）
+│   │   ├── auth/AuthContext.tsx   # Supabase Auth Provider (signIn/signUp/signOut)
+│   │   ├── mock-data.ts           # 全模块 Mock 数据
+│   │   ├── navigation.ts          # 侧边栏导航配置
+│   │   └── supabase.ts            # Supabase 客户端 (getSupabase)
+│   ├── hooks/
+│   │   └── useSupabase.ts         # 19 个泛型 CRUD hooks (useInbox/useApprovals...)
 │   └── types/
-│       └── index.ts            # 全部 TypeScript 类型定义（17+ 接口）
+│       └── index.ts               # 全部 TypeScript 类型定义（17+ 接口）
 ├── database/
 │   └── schema.sql              # PostgreSQL 完整建表 SQL（20+ 张表）
 ├── public/
@@ -94,63 +98,134 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 
 ## 多 AI 协作指引
 
-本项目由三个 AI 协同开发，分工如下：
+本项目由三个 AI 协同开发。**当前阶段：Supabase Auth 已集成，进入功能开发阶段。**
 
-### WorkBuddy — 架构 + DevOps
-- 项目脚手架、导航路由、布局系统
-- Supabase 数据库集成
-- PWA 配置与 iOS 适配
-- 部署（Vercel/EdgeOne/CloudStudio）
-- 代码审查与分支合并
-- Python Worker（内容采集脚本）
+### 当前状态 (2026-08-02)
 
-### Claude — AI 管线核心
-**分支：`feat/ai-pipeline`**
-- AI 收件箱意图解析 Prompt 设计
-- 内容聚合过滤评分算法
-- 穿搭推荐匹配逻辑
-- 理财分析 & 孩子成长 AI 分析
-- 旅行攻略自动生成
-
-### Codex — 前端交互打磨
-**分支：`feat/ui-polish`**
-- 任务看板拖拽动画
-- 健康数据趋势图动画
-- 内容卡片 hover/展开动效
-- 移动端手势交互
-- 暗色模式切换动画
-- 表单验证 & 无障碍
+| 项目 | 状态 |
+|------|------|
+| 项目骨架 (Next.js 16 + Tailwind) | ✅ 完成 |
+| Supabase 项目连接 | ✅ czgstjicmvtkdsjpdoni.supabase.co |
+| Auth (email/password) | ✅ AuthContext + 路由守卫 |
+| 数据库 Schema (20+ 表) | ✅ 已部署 |
+| 19 个 CRUD Hooks | ✅ useSupabase.ts |
+| PWA (iOS 安装) | ✅ manifest + SW |
+| 页面组件 (14 页面) | ✅ 使用 Mock 数据渲染 |
+| AI 管线逻辑 | ❌ 待 Claude 开发 |
+| UI 交互打磨 | ❌ 待 Codex 开发 |
 
 ### Git 分支策略
+
 ```
-main ────────────────────────────  (WorkBuddy 维护)
-  ├── feat/supabase-auth           (WorkBuddy)
-  ├── feat/ai-pipeline             (Claude)
-  └── feat/ui-polish               (Codex)
+main ────────────────────────────  (WorkBuddy 维护，合并目标)
+  ├── feat/supabase-auth  ← 当前  (Auth 基础设施，即将合并)
+  ├── feat/ai-pipeline             (Claude — 从 supabase-auth 拉最新)
+  └── feat/ui-polish               (Codex — 从 supabase-auth 拉最新)
 ```
 
-**铁律**：同一时间同一文件只一个 AI 改。PR 由 WorkBuddy Review 后合并。
+**铁律**：同一时间同一文件只一个 AI 改。PR 由 WorkBuddy Review 后合并到 main。
 
-### 给 Claude 的上下文
+---
+
+### 给 Claude 的任务（分支：`feat/ai-pipeline`）
+
+⚠️ **开始前执行**：
+```bash
+git checkout feat/ai-pipeline
+git rebase feat/supabase-auth   # 获取最新 Auth 基础设施
+```
+
+**任务清单**：
+
+| # | 任务 | 涉及文件 | 说明 |
+|---|------|---------|------|
+| 1 | AI 收件箱意图解析 | `src/components/inbox/InboxPage.tsx` | 用户输入自然语言 → 解析为 task/shopping/inspiration/auto 四个类别。设计 Prompt 链和解析逻辑。 |
+| 2 | 内容聚合评分算法 | `src/components/content/ContentHub.tsx` | B站/小红书/YouTube 内容 -> 兴趣匹配度评分 + 优先级排序 |
+| 3 | 穿搭推荐匹配 | `src/components/wardrobe/WardrobePage.tsx` | 根据天气/季节/场合，从衣柜数据库中匹配推荐搭配 |
+| 4 | 理财分析引擎 | `src/components/finance/FinancePage.tsx` | 收支分类 → 趋势分析 → AI 建议 |
+| 5 | 孩子成长 AI 分析 | `src/components/family/ChildGrowth.tsx` | 从生长数据中提取趋势，生成成长报告 |
+| 6 | 旅行攻略生成 | `src/components/family/TravelPlan.tsx` | 根据目的地 + 日期 + 偏好生成行程和行李清单 |
+| 7 | AI Prompt 库 | `src/lib/ai/prompts.ts` (新建) | 统一管理所有 Prompt 模板和 chain-of-thought 逻辑 |
+
+**交付方式**：输出方案设计文档 + 核心算法/代码。不改 UI 组件结构（留给 Codex）。
+
+---
+
+### 给 Codex 的任务（分支：`feat/ui-polish`）
+
+⚠️ **开始前执行**：
+```bash
+git checkout feat/ui-polish
+git rebase feat/supabase-auth   # 获取最新 Auth 基础设施
+```
+
+**任务清单**：
+
+| # | 任务 | 涉及文件 | 说明 |
+|---|------|---------|------|
+| 1 | Auth 表单 UI 优化 | `src/components/auth/AuthForm.tsx` | 当前表单存在样式问题（label/输入框重叠），需要彻底重构为美观的登录/注册界面 |
+| 2 | 侧边栏导航动画 | `src/components/layout/Sidebar.tsx` | 展开/折叠过渡动画，移动端手势滑动 |
+| 3 | 仪表盘卡片动效 | `src/components/overview/OverviewPage.tsx` | 统计数据卡片 hover/入场动画 |
+| 4 | 任务看板拖拽 | `src/components/work/WorkTasks.tsx` | 四列看板（待办/进行中/审核/完成）的拖拽排序 |
+| 5 | 健康数据可视化 | `src/components/family/FamilyHealth.tsx` | 心率/步数/睡眠的趋势折线图 |
+| 6 | 内容卡片交互 | `src/components/content/ContentHub.tsx` | 卡片 hover 展开、收藏动画、筛选标签 |
+| 7 | 暗色模式切换 | 全局 | 提供系统自适应暗色模式 + 手动切换按钮 |
+| 8 | 移动端手势优化 | 全局 | 滑动返回、下拉刷新、长按菜单 |
+| 9 | 表单验证 & 无障碍 | 全局 | 输入校验、aria 标签、键盘导航 |
+| 10 | iOS PWA 体验 | `public/manifest.json`, `src/components/layout/` | Splash screen、状态栏颜色、底部安全区域适配 |
+
+**交付方式**：直接输出修改后的完整组件代码。
+
+---
+
+### WorkBuddy 的职责（我）
+
+- [x] 项目骨架 + Supabase 集成 + 数据库 Schema
+- [x] Auth 系统 + PWA 配置
+- [ ] 修复登录流程残余 bug
+- [ ] Review Claude 和 Codex 的 PR
+- [ ] 代码合并到 main
+- [ ] 部署到 Vercel / EdgeOne
+- [ ] Python Worker（内容定时抓取脚本）
+
+---
+
+### 给 Claude 的上下文模板
+
 ```
 项目：Next.js 16 + TypeScript + Tailwind
+当前分支：feat/ai-pipeline（已 rebase feat/supabase-auth）
+
 类型定义：src/types/index.ts（所有接口）
 Mock 数据：src/lib/mock-data.ts
-AI 收件箱组件：src/components/inbox/InboxPage.tsx
-内容聚合组件：src/components/content/ContentHub.tsx
+Supabase Hooks：src/hooks/useSupabase.ts（19 个 CRUD hook）
+Auth 系统：src/lib/auth/AuthContext.tsx（useAuth() 可用）
 
-请设计 [具体功能] 的 AI Prompt 链/算法逻辑，
-输出方案设计，不直接改代码。
+目标组件：
+- src/components/inbox/InboxPage.tsx
+- src/components/content/ContentHub.tsx
+- src/components/wardrobe/WardrobePage.tsx
+- src/components/finance/FinancePage.tsx
+- src/components/family/ChildGrowth.tsx
+- src/components/family/TravelPlan.tsx
+
+请设计 [具体功能] 的 AI Prompt 链/算法逻辑。
+输出方案设计 + 核心代码，不改 UI 结构。
 ```
 
-### 给 Codex 的上下文
+### 给 Codex 的上下文模板
+
 ```
 项目：Next.js 16 + TypeScript + Tailwind
-组件路径：src/components/work/WorkTasks.tsx（或其他）
+当前分支：feat/ui-polish（已 rebase feat/supabase-auth）
 
-请优化 [具体组件] 的交互体验：
-- 保持现有 Tailwind class 命名风格
-- 输出完整组件代码
+组件路径：src/components/[模块]/[组件].tsx
+样式文件：src/app/globals.css
+图标库：lucide-react
+
+请优化 [具体组件] 的交互体验。
+保持现有 Tailwind class 风格。
+输出完整修改后的组件代码。
 ```
 
 ## iOS 安装
