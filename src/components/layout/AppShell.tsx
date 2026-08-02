@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { useRouter } from "next/navigation";
 import { LogOut, User, Menu } from "lucide-react";
 import Sidebar from "./Sidebar";
 import OverviewPage from "@/components/overview/OverviewPage";
@@ -23,6 +24,16 @@ export default function AppShell() {
   const [activeView, setActiveView] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, loading, signOut, supabaseReady } = useAuth();
+  const router = useRouter();
+
+  // Client-side auth guard: redirect to login if Supabase is ready but no user
+  useEffect(() => {
+    if (!loading && supabaseReady && !user) {
+      const next = window.location.pathname !== "/" ? window.location.pathname : "";
+      const loginUrl = next ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login";
+      router.replace(loginUrl);
+    }
+  }, [loading, user, supabaseReady, router]);
 
   const renderPage = () => {
     switch (activeView) {

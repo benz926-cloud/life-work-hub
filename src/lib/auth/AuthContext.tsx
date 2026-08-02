@@ -55,7 +55,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("[Auth] signIn error:", error.message);
         return { error: error.message };
       }
-      console.log("[Auth] signIn success, user:", data.user?.email);
+      // Immediately set session in state so redirect doesn't race with onAuthStateChange
+      if (data.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+        console.log("[Auth] signIn success, user:", data.session.user?.email);
+      }
       return { error: null };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "登录失败，请重试";
