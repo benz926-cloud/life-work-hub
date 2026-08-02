@@ -1,0 +1,135 @@
+# ============================================================================
+# Life Work Hub CI —— 三个 AI 往同一个仓库推代码的最低安全网
+# 规则来源：AGENTS.md 第 6 节。改门禁请同步改那里。
+# ============================================================================
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, "feat/**", "chore/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  # 存量 ESLint 错误基线（棘轮）。只许降不许涨。
+  # 修掉存量错误后请把这个数字调低，否则棘轮就锁不紧了。
+  # 2026-08-03 基线明细：src/types/index.ts 4（no-explicit-any）、
+  #                      src/components/family/TravelPlan.tsx 5、
+  #                      src/lib/auth/AuthContext.tsx 1（set-state-in-effect）
+  LINT_ERROR_BASELINE: "10"
+
+jobs:
+  # --------------------------------------------------------------------------
+  # 1. 类型 + Lint + 构建：主门禁
+  # --------------------------------------------------------------------------
+  verify:
+    name: 类型 / Lint / 构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 类型检查（全仓库必须 0 error）
+        run: npx tsc --noEmit
+
+      - name: ESLint —— 新代码零容忍
+        run: |
+          DIRS=""
+          for d in src/lib/ai src/hooks src/app/api; do
+            [ -d "$d" ] && DIRS="$DIRS $d"
+          done
+          if [ -z "$DIRS" ]; then
+            echo "这些目录还不存在，跳过"; exit 0
+          fi
+          echo "检查：$DIRS"
+          npx eslint $DIRS --max-warnings 0
+
+      - name: ESLint —— 存量棘轮（只许降不许涨）
+        run: |
+          npx eslint src --format json > /tmp/lint.json || true
+          COUNT=$(node -e "
+            const d=require('/tmp/lint.json');
+            console.log(d.reduce((s,f)=>s+f.errorCount,0));
+          ")
+          BASE=${{ env.LINT_ERROR_BASELINE }}
+          echo "当前存量 ESLint 错误：$COUNT　基线：$BASE"
+          node -e "
+            const d=require('/tmp/lint.json');
+            d.filter(f=>f.errorCount).forEach(f=>
+              console.log('  '+f.filePath.replace(process.cwd()+'/','')+' → '+f.errorCount+' error'));
+          "
+          if [ "$COUNT" -gt "$BASE" ]; then
+            echo "::error::新增了 $((COUNT-BASE)) 个 ESLint 错误。请修掉，或说明原因后调整 LINT_ERROR_BASELINE。"
+            exit 1
+          fi
+          if [ "$COUNT" -lt "$BASE" ]; then
+            echo "::notice::存量错误已降到 $COUNT，请把 .github/workflows/ci.yml 里的 LINT_ERROR_BASELINE 一并调低。"
+          fi
+
+      - name: 构建
+        # Supabase 未配置时 src/lib/supabase.ts 会回落到 placeholder，构建不依赖真实 key
+        run: npx next build
+
+  # --------------------------------------------------------------------------
+  # 2. AI 引擎冒烟测试
+  # --------------------------------------------------------------------------
+  smoke:
+    name: AI 引擎冒烟测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 跑冒烟测试
+        run: |
+          if [ ! -f scripts/smoke-ai.ts ]; then
+            echo "scripts/smoke-ai.ts 尚未合入，跳过"; exit 0
+          fi
+          npm i --no-save tsx
+          npx tsx scripts/smoke-ai.ts
+
+  # --------------------------------------------------------------------------
+  # 3. 归属守卫：机械执行 AGENTS.md 的按层分工
+  # --------------------------------------------------------------------------
+  ownership:
+    name: 层归属守卫
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 检查有没有越层
+        env:
+          BRANCH_NAME: ${{ github.head_ref }}
+          BASE_REF: origin/${{ github.base_ref }}
+          OVERRIDE_OWNERSHIP: ${{ contains(github.event.pull_request.labels.*.name, 'override-ownership') && '1' || '0' }}
+        run: |
+          if [ ! -f scripts/check-ownership.sh ]; then
+            echo "scripts/check-ownership.sh 尚未合入，跳过"; exit 0
+          fi
+          bash scripts/check-ownership.sh
