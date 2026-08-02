@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { Mail, Lock, User, ArrowRight, Loader2, Sparkles, AlertCircle, CheckCircle } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Loader2, Sparkles, AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 
 interface AuthFormProps {
   mode: "login" | "signup";
@@ -14,10 +14,22 @@ export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
+
+  const friendlyError = (msg: string): string => {
+    const lower = msg.toLowerCase();
+    if (lower.includes("invalid login credentials")) return "邮箱或密码错误，请检查后重试";
+    if (lower.includes("email not confirmed")) return "邮箱尚未验证，请查看确认邮件";
+    if (lower.includes("user not found")) return "该邮箱尚未注册";
+    if (lower.includes("weak_password")) return "密码强度不足，请设置至少 6 位密码";
+    if (lower.includes("email_exists")) return "该邮箱已注册，请直接登录";
+    if (lower.includes("network")) return "网络连接失败，请检查网络后重试";
+    return msg;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +46,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           : await signUp(email, password, name);
 
       if (result.error) {
-        setError(result.error);
+        setError(friendlyError(result.error));
         setLoading(false);
         return;
       }
@@ -49,7 +61,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       router.push("/");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "发生未知错误，请重试";
-      setError(msg);
+      setError(friendlyError(msg));
       setLoading(false);
     }
   };
@@ -146,15 +158,24 @@ export function AuthForm({ mode }: AuthFormProps) {
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="至少 6 位字符"
                 minLength={6}
                 required
                 disabled={loading}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition disabled:opacity-60"
+                className="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition disabled:opacity-60"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                tabIndex={-1}
+                aria-label={showPassword ? "隐藏密码" : "显示密码"}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
