@@ -22,6 +22,8 @@ import { recommendOutfits, recommendOutfitsLocal, type OutfitCandidate, type Out
 import { analyzeFinance, analyzeFinanceWithAI, type FinanceAnalysis, type AnalyzeOptions } from "@/lib/ai/finance";
 import { analyzeGrowth, analyzeGrowthWithAI, type GrowthReport } from "@/lib/ai/growth";
 import { generateTravel, generateTravelLocal, type TravelDraft, type TravelInput } from "@/lib/ai/travel";
+import { buildSuggestions, type SuggestionInput } from "@/lib/ai/suggestions";
+import type { Recommendation } from "@/lib/ai/types";
 
 interface AIState<T> {
   data: T;
@@ -246,4 +248,21 @@ export function useTravelGenerator() {
   }, []);
 
   return { ...(state ?? { data: null, loading: false, error: null, source: "local" as const, confidence: 0, reasons: [], degraded: false }), generate };
+}
+
+
+// ---------------------------------------------------------------
+// 7. AI 主动建议（概览页）
+// ---------------------------------------------------------------
+/**
+ * 把各引擎的结论汇总成一个排好序的建议列表。
+ * 这不是数据库里的表，而是实时算出来的视图——数据变了建议就变。
+ * 传进来的每一项都是可选的，缺哪个就少几条建议，不会报错。
+ */
+export function useAISuggestions(input: SuggestionInput): Recommendation[] {
+  const { finance, growth, travel, alerts, checkins, now } = input;
+  return useMemo(
+    () => buildSuggestions({ finance, growth, travel, alerts, checkins, now }),
+    [finance, growth, travel, alerts, checkins, now]
+  );
 }

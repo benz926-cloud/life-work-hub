@@ -54,7 +54,24 @@ interface Collection<T> {
 `useFamilyMembersData` `useHealthData` `useCheckinHabitsData` `useCheckinRecordsData`
 `useFinanceData` `useSavingsGoalsData` `useWardrobeData` `useOutfitsData`
 `useTravelPlansData` `useContentFeedsData` `useSubscriptionRulesData`
-`useChildGrowthData(familyMemberId)`
+`useSystemIntegrationsData` `useChildGrowthData(familyMemberId)`
+
+## AI 主动建议不是一张表
+
+概览页的「AI 主动建议」由 `useAISuggestions()` **实时算出来**，不存数据库。
+它汇总五个来源：未处理的关键预警、理财引擎的 recommendations、行前清单缺口、
+孩子成长提示、打卡进度落后。数据变了建议就变。
+
+```tsx
+const suggestions = useAISuggestions({
+  finance: financeAnalysis, growth: growthReport,
+  travel: { draft, startDate: plan.start_date },
+  alerts: alertItems, checkins: { habits, records },
+});
+```
+
+每一项都是可选的，缺哪个就少几条建议。**没有数据的来源不出建议**——
+宁可少几条也不凑数，这是刻意的：一个凭空编出来的"建议"会毁掉整块的可信度。
 
 ## 三个坑（已在数据层解决）
 

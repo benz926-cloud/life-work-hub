@@ -21,19 +21,19 @@ import {
   useInbox, useApprovals, useAlerts, useWorkTasks, useKPIReports,
   useFamilyMembers, useHealthRecords, useChildGrowth, useCheckinHabits,
   useCheckinRecords, useFinance, useSavingsGoals, useWardrobe, useOutfits,
-  useTravelPlans, useContentFeeds, useSubscriptionRules,
+  useTravelPlans, useContentFeeds, useSubscriptionRules, useIntegrations,
   type ListOptions,
 } from "./useSupabase";
 import {
   mockInboxItems, mockApprovals, mockAlerts, mockWorkTasks, mockKPIs,
   mockFamilyMembers, mockHealthRecords, mockGrowthRecords, mockHabits,
   mockCheckins, mockFinanceRecords, mockSavingsGoals, mockWardrobeItems,
-  mockOutfits, mockTravelPlans, mockContentFeeds, mockSubscriptionRules,
+  mockOutfits, mockTravelPlans, mockContentFeeds, mockSubscriptionRules, mockIntegrations,
 } from "@/lib/mock-data";
 import type {
   InboxItem, Approval, Alert, WorkTask, KPIReport, FamilyMember, HealthRecord,
   ChildGrowthRecord, CheckinHabit, CheckinRecord, FinanceRecord, SavingsGoal,
-  WardrobeItem, Outfit, TravelPlan, ContentFeed, SubscriptionRule,
+  WardrobeItem, Outfit, TravelPlan, ContentFeed, SubscriptionRule, SystemIntegration,
 } from "@/types";
 
 export type DataSource = "supabase" | "mock";
@@ -180,6 +180,7 @@ export function useOutfitsData() { return useCollection<Outfit>(useOutfits() as 
 export function useTravelPlansData() { return useCollection<TravelPlan>(useTravelPlans() as any, { mock: mockTravelPlans }); }
 export function useContentFeedsData() { return useCollection<ContentFeed>(useContentFeeds() as any, { mock: mockContentFeeds }); }
 export function useSubscriptionRulesData() { return useCollection<SubscriptionRule>(useSubscriptionRules() as any, { mock: mockSubscriptionRules }); }
+export function useSystemIntegrationsData() { return useCollection<SystemIntegration>(useIntegrations() as any, { mock: mockIntegrations }); }
 
 /**
  * 孩子成长记录：这张表的归属列是 family_member_id，不是 user_id。
