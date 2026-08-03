@@ -21,7 +21,7 @@ env:
   # 修掉存量错误后请把这个数字调低，否则棘轮就锁不紧了。
   # 2026-08-03 基线明细：src/types/index.ts 4（no-explicit-any）、
   #                      src/lib/auth/AuthContext.tsx 1（set-state-in-effect）
-  LINT_ERROR_BASELINE: "5"
+  LINT_ERROR_BASELINE: "0"
 
 jobs:
   # --------------------------------------------------------------------------
