@@ -5,7 +5,7 @@ import { ChevronDown, ExternalLink, Heart, Search, Sparkles } from "lucide-react
 import { SectionHeader, Card } from "@/components/shared/SharedComponents";
 import { AITrust } from "@/components/shared/AITrust";
 import { buildUserContext, useContentRanking } from "@/hooks/useAI";
-import { mockContentFeeds, mockFamilyMembers, mockSubscriptionRules, mockTravelPlans } from "@/lib/mock-data";
+import { useContentFeedsData, useFamilyMembersData, useSubscriptionRulesData, useTravelPlansData } from "@/hooks/useData";
 import type { ContentCategory, ContentPlatform } from "@/types";
 
 const platformConfig: Record<ContentPlatform, { label: string; color: string }> = { bilibili: { label: "B站", color: "bg-pink-100 text-pink-700 dark:bg-pink-500/15 dark:text-pink-300" }, xiaohongshu: { label: "小红书", color: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" }, youtube: { label: "YouTube", color: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300" } };
@@ -15,6 +15,8 @@ const verdictColor = { must_read: "bg-emerald-100 text-emerald-700 dark:bg-emera
 
 export default function ContentHub() {
   const [platform, setPlatform] = useState<ContentPlatform | "all">("all"); const [tag, setTag] = useState("全部"); const [query, setQuery] = useState(""); const [expandedId, setExpandedId] = useState<string | null>(null); const [favorites, setFavorites] = useState<Set<string>>(() => new Set()); const [animatingId, setAnimatingId] = useState<string | null>(null); const timer = useRef<number | null>(null);
+  const feeds = useContentFeedsData(); const rules = useSubscriptionRulesData(); const plans = useTravelPlansData(); const members = useFamilyMembersData();
+  const mockContentFeeds = feeds.items; const mockSubscriptionRules = rules.items; const mockTravelPlans = plans.items; const mockFamilyMembers = members.items;
   const ctx = buildUserContext({ trip: mockTravelPlans[0] ? { destination: mockTravelPlans[0].destination, start_date: mockTravelPlans[0].start_date } : null, familyMembers: mockFamilyMembers, childTopics: ["开学"], workTopics: ["AI"] });
   const { data: ranked, enhance, loading, source, degraded, reasons } = useContentRanking(mockContentFeeds, mockSubscriptionRules, { ctx });
   const filtered = useMemo(() => ranked.filter((item) => { const activeTag = tags.find((entry) => entry.label === tag); const needle = query.trim().toLowerCase(); return (platform === "all" || item.feed.platform === platform) && (!activeTag?.categories || activeTag.categories.includes(item.category)) && (!needle || `${item.feed.title} ${item.feed.author} ${item.feed.summary}`.toLowerCase().includes(needle)); }), [ranked, platform, tag, query]);

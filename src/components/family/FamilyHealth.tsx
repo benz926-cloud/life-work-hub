@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { Activity, Footprints, Moon, TrendingUp } from "lucide-react";
 import { SectionHeader, Card } from "@/components/shared/SharedComponents";
-import { mockFamilyMembers, mockHealthRecords } from "@/lib/mock-data";
+import { useFamilyMembersData, useHealthData } from "@/hooks/useData";
+import type { FamilyMember, HealthRecord } from "@/types";
 
 const roleLabels: Record<string, string> = { self: "自己", spouse: "妻子", child: "女儿", parent: "父亲" };
 const trendData = {
@@ -14,6 +15,7 @@ const trendData = {
 type Metric = keyof typeof trendData;
 
 export default function FamilyHealth() {
+  const members = useFamilyMembersData(); const healthRecords = useHealthData();
   const [metric, setMetric] = useState<Metric>("heart");
   const active = trendData[metric];
   return (
@@ -24,7 +26,7 @@ export default function FamilyHealth() {
         <div className="grid gap-4 p-4 md:grid-cols-[minmax(0,1fr)_12rem]"><div><TrendGraph label={active.label} values={active.values} color={active.color} unit={active.unit} /><div className="mt-2 flex justify-between px-1 text-[10px] text-slate-400"><span>周一</span><span>周二</span><span>周三</span><span>周四</span><span>周五</span><span>周六</span><span>今天</span></div></div><div className="flex flex-col justify-center rounded-xl bg-slate-50 p-4 dark:bg-slate-800/70"><active.Icon size={20} style={{ color: active.color }} aria-hidden="true" /><div className="mt-4 flex items-baseline gap-1"><strong className="text-3xl tracking-tight text-slate-900 dark:text-white">{active.value}</strong><span className="text-xs text-slate-400">{active.unit}</span></div><p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{active.note}</p></div></div>
       </section>
       <div className="grid gap-4 lg:grid-cols-2">
-        {mockFamilyMembers.map((member) => <FamilyCard key={member.id} member={member} />)}
+        {members.items.map((member) => <FamilyCard key={member.id} member={member} records={healthRecords.items} />)}
       </div>
     </div>
   );
@@ -41,8 +43,8 @@ function TrendGraph({ label, values, color, unit }: { label: string; values: rea
   return <div><div className="sr-only">{label}趋势，最高 {max}{unit}，最低 {min}{unit}</div><svg viewBox="0 0 700 190" role="img" aria-label={`${label}七日趋势`} className="h-44 w-full overflow-visible"><defs><linearGradient id={`trend-${label}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".24" /><stop offset="1" stopColor={color} stopOpacity="0" /></linearGradient></defs>{[32, 82, 132].map((y) => <line key={y} x1="18" y1={y} x2="682" y2={y} stroke="currentColor" strokeOpacity=".08" strokeDasharray="4 5" />)}<path d={area} fill={`url(#trend-${label})`} /><path d={path} fill="none" stroke={color} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" /><circle cx={lastX} cy={lastY} r="6" fill="white" stroke={color} strokeWidth="3" className="dark:fill-slate-900" /></svg></div>;
 }
 
-function FamilyCard({ member }: { member: (typeof mockFamilyMembers)[number] }) {
-  const health = mockHealthRecords.find((record) => record.family_member_id === member.id);
+function FamilyCard({ member, records }: { member: FamilyMember; records: HealthRecord[] }) {
+  const health = records.find((record) => record.family_member_id === member.id);
   const metrics = health ? [
     health.steps && { value: health.steps.toLocaleString(), label: "今日步数" }, health.sleep_hours && { value: `${health.sleep_hours}h`, label: "昨晚睡眠" }, health.heart_rate && { value: `${health.heart_rate}`, label: "静息心率" }, health.blood_pressure_systolic && { value: `${health.blood_pressure_systolic}/${health.blood_pressure_diastolic}`, label: "血压", warning: true }, health.blood_sugar && { value: `${health.blood_sugar}`, label: "空腹血糖" }, health.active_minutes && { value: `${health.active_minutes}min`, label: "运动时长" },
   ].filter(Boolean) as { value: string; label: string; warning?: boolean }[] : [];

@@ -1,15 +1,16 @@
 "use client";
 
 import { SectionHeader, Badge, Card } from "@/components/shared/SharedComponents";
-import { mockApprovals } from "@/lib/mock-data";
+import { useApprovalsData } from "@/hooks/useData";
+import { DemoBanner } from "@/components/shared/DataStates";
 
 export default function WorkApprovals() {
-  const pending = mockApprovals.filter((a) => a.status === "pending");
-  const history = mockApprovals.filter((a) => a.status !== "pending");
+  const approvals = useApprovalsData(); const pending = approvals.items.filter((a) => a.status === "pending");
+  const history = approvals.items.filter((a) => a.status !== "pending");
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="📋 审批中心" subtitle={`飞书审批 · ${pending.length} 条待处理`} />
+      <SectionHeader title="📋 审批中心" subtitle={`飞书审批 · ${pending.length} 条待处理`} /><DemoBanner isDemo={approvals.isDemo} />
 
       {/* Pending */}
       <Card>
@@ -44,10 +45,10 @@ export default function WorkApprovals() {
                 </Badge>
               )}
               <div className="flex gap-2 flex-shrink-0">
-                <button className="px-3 py-1.5 text-xs bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                <button onClick={() => void approvals.update(approval.id, { status: "approved" })} className="px-3 py-1.5 text-xs bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
                   ✓ 通过
                 </button>
-                <button className="px-3 py-1.5 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                <button onClick={() => void approvals.update(approval.id, { status: "rejected" })} className="px-3 py-1.5 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
                   ✕ 驳回
                 </button>
               </div>
