@@ -1,116 +1,24 @@
 "use client";
 
-import { SectionHeader, Card, Badge } from "@/components/shared/SharedComponents";
+import { AlertTriangle, Sparkles } from "lucide-react";
+import { SectionHeader, Card } from "@/components/shared/SharedComponents";
+import { AITrust } from "@/components/shared/AITrust";
+import { useFinanceAnalysis } from "@/hooks/useAI";
 import { mockFinanceRecords, mockSavingsGoals } from "@/lib/mock-data";
 
-const categoryLabels: Record<string, string> = {
-  food: "餐饮", transport: "交通", shopping: "购物", housing: "住房",
-  entertainment: "娱乐", health: "健康", education: "教育", family: "家庭", other: "其他",
-};
+const categoryLabels: Record<string, string> = { food: "餐饮", transport: "交通", shopping: "购物", housing: "住房", entertainment: "娱乐", health: "健康", education: "教育", family: "家庭", other: "其他" };
+const rigidityLabels = { fixed: "刚性", semi: "半刚性", flexible: "弹性" };
+const severityStyle = { urgent: "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200", attention: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200", info: "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200" };
 
 export default function FinancePage() {
-  const expenses = mockFinanceRecords.filter((r) => r.type === "expense");
-  const income = mockFinanceRecords.filter((r) => r.type === "income");
-  const totalExpense = expenses.reduce((sum, r) => sum + r.amount, 0);
-  const totalIncome = income.reduce((sum, r) => sum + r.amount, 0);
-
-  return (
-    <div className="space-y-6">
-      <SectionHeader title="💰 理财管理" subtitle="8月账本" />
-
-      {/* Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card>
-          <div className="p-4">
-            <div className="text-xs text-gray-500">本月收入</div>
-            <div className="text-2xl font-bold text-green-600">¥{totalIncome.toLocaleString()}</div>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-4">
-            <div className="text-xs text-gray-500">本月支出</div>
-            <div className="text-2xl font-bold text-red-600">¥{totalExpense.toLocaleString()}</div>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-4">
-            <div className="text-xs text-gray-500">结余</div>
-            <div className="text-2xl font-bold text-blue-600">¥{(totalIncome - totalExpense).toLocaleString()}</div>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-4">
-            <div className="text-xs text-gray-500">月预算</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">¥10,000</div>
-            <div className="text-xs text-gray-500 mt-1">已用 {Math.round((totalExpense / 10000) * 100)}%</div>
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent transactions */}
-        <Card>
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-            <span className="text-sm font-medium text-gray-900 dark:text-white">📋 最近交易</span>
-          </div>
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {mockFinanceRecords.map((record) => (
-              <div key={record.id} className="p-3 flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                  record.type === "income"
-                    ? "bg-green-100 dark:bg-green-900/20 text-green-600"
-                    : "bg-red-100 dark:bg-red-900/20 text-red-600"
-                }`}>
-                  {record.type === "income" ? "+" : "-"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-gray-900 dark:text-white truncate">
-                    {record.description}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {categoryLabels[record.category] || record.category} · {record.date}
-                  </div>
-                </div>
-                <div className={`text-sm font-medium ${
-                  record.type === "income" ? "text-green-600" : "text-red-600"
-                }`}>
-                  {record.type === "income" ? "+" : "-"}¥{record.amount}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Savings goals */}
-        <Card>
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-            <span className="text-sm font-medium text-gray-900 dark:text-white">🎯 储蓄目标</span>
-          </div>
-          <div className="p-4 space-y-4">
-            {mockSavingsGoals.map((goal) => {
-              const pct = Math.round((goal.current_amount / goal.target_amount) * 100);
-              return (
-                <div key={goal.id}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-700 dark:text-gray-300">{goal.name}</span>
-                    <span className="text-gray-500">{pct}%</span>
-                  </div>
-                  <div className="w-full h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>¥{goal.current_amount.toLocaleString()}</span>
-                    <span>¥{goal.target_amount.toLocaleString()}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
+  const { data: analysis, enhance, loading, source, degraded, reasons } = useFinanceAnalysis(mockFinanceRecords, mockSavingsGoals, { monthlyBudget: 10000 });
+  const { totals, budget } = analysis;
+  const monthlyMax = Math.max(...analysis.monthly.map((month) => month.expense), 1);
+  return <div className="space-y-6"><SectionHeader title="理财管理" subtitle={`${analysis.period} 账本 · 所有金额由本地规则按周期核算`} action={<button onClick={() => void enhance()} disabled={loading} className="flex items-center gap-1.5 rounded-xl bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-60"><Sparkles size={14} className={loading ? "animate-spin" : ""} />AI 分析</button>} /><AITrust source={source} degraded={degraded} reasons={reasons} />
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Metric label="本月收入" value={`¥${totals.income.toLocaleString()}`} tone="text-emerald-600" note={totals.incomeIsEstimated ? "收入按历史月均估算" : undefined} /><Metric label="本月支出" value={`¥${totals.expense.toLocaleString()}`} tone="text-rose-600" /><Metric label="本月结余" value={`¥${totals.net.toLocaleString()}`} tone="text-sky-600" note={`储蓄率 ${Math.round(totals.savingsRate * 100)}%`} /><Metric label="财务健康分" value={`${analysis.healthScore}`} tone="text-violet-600" note="0–100 综合评分" /></div>
+    <div className="grid gap-6 lg:grid-cols-5"><Card className="lg:col-span-3"><div className="border-b border-slate-100 p-4 dark:border-slate-800"><h2 className="text-sm font-semibold text-slate-900 dark:text-white">支出结构</h2><p className="mt-1 text-xs text-slate-500">按刚性、半刚性和弹性支出拆分，优先从弹性项目寻找空间。</p></div><div className="space-y-3 p-4">{analysis.byCategory.map((item) => <div key={item.category}><div className="mb-1 flex justify-between text-xs"><span className="text-slate-700 dark:text-slate-300">{item.label}<span className="ml-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 dark:bg-slate-800">{rigidityLabels[item.rigidity]}</span></span><span className="text-slate-500">¥{item.amount.toLocaleString()} · {Math.round(item.pct)}%</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className={`h-full rounded-full ${item.rigidity === "fixed" ? "bg-slate-500" : item.rigidity === "semi" ? "bg-sky-500" : "bg-emerald-500"}`} style={{ width: `${Math.round(item.pct)}%` }} /></div></div>)}{analysis.byCategory.length === 0 && <p className="py-6 text-center text-sm text-slate-400">本期暂无支出记录</p>}</div></Card>
+      <Card className="lg:col-span-2"><div className="border-b border-slate-100 p-4 dark:border-slate-800"><h2 className="text-sm font-semibold text-slate-900 dark:text-white">预算与月末预测</h2></div><div className="p-4"><div className="flex items-baseline justify-between"><strong className="text-2xl text-slate-900 dark:text-white">¥{budget.used.toLocaleString()}</strong><span className="text-xs text-slate-500">预算 ¥{budget.limit?.toLocaleString() ?? "—"}</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className={`h-full rounded-full ${budget.risk === "over" ? "bg-rose-500" : budget.risk === "watch" ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${Math.min(budget.usedPct ?? 0, 100)}%` }} /></div><p className="mt-2 text-xs text-slate-500">已使用 {Math.round(budget.usedPct ?? 0)}%</p><div className={`mt-5 rounded-xl p-3 ${budget.projectionConfidence === "low" ? "bg-slate-50 text-slate-500 dark:bg-slate-800" : "bg-sky-50 text-sky-900 dark:bg-sky-500/10 dark:text-sky-100"}`}><div className="text-xs font-medium">月末支出预测</div><div className="mt-1 text-xl font-semibold">¥{budget.projected.toLocaleString()}</div><p className="mt-1 text-xs">{budget.projectionConfidence === "low" ? "样本天数不足，预测仅作弱提示" : "根据本期弹性支出趋势估算"}</p></div></div></Card></div>
+    <div className="grid gap-6 lg:grid-cols-2"><Card><div className="border-b border-slate-100 p-4 dark:border-slate-800"><h2 className="text-sm font-semibold text-slate-900 dark:text-white">月度收支趋势</h2></div><div className="space-y-3 p-4">{analysis.monthly.map((month) => <div key={month.month} className="flex items-center gap-3"><span className="w-14 text-xs text-slate-400">{month.month}</span><div className="flex-1"><div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-rose-400" style={{ width: `${(month.expense / monthlyMax) * 100}%` }} /></div><div className="mt-1 flex justify-between text-[10px] text-slate-400"><span>收入 ¥{month.income.toLocaleString()}</span><span>支出 ¥{month.expense.toLocaleString()}</span></div></div></div>)}</div></Card><Card><div className="border-b border-slate-100 p-4 dark:border-slate-800"><h2 className="text-sm font-semibold text-slate-900 dark:text-white">异常与建议</h2></div><div className="space-y-2 p-4">{analysis.anomalies.map((item) => <div key={`${item.kind}-${item.category}`} className={`rounded-xl border p-3 text-xs ${severityStyle[item.severity]}`}><div className="flex items-center gap-1.5 font-medium"><AlertTriangle size={14} />{categoryLabels[item.category]}</div><p className="mt-1 leading-5">{item.message}</p></div>)}{analysis.recommendations.map((item) => <div key={item.id} className={`rounded-xl border p-3 text-xs ${severityStyle[item.severity]}`}><div className="font-medium">{item.icon} {item.title}</div><p className="mt-1 leading-5">{item.detail}</p></div>)}{analysis.anomalies.length === 0 && analysis.recommendations.length === 0 && <p className="py-6 text-center text-sm text-slate-400">暂无需要特别处理的事项</p>}</div></Card></div>
+    <Card><div className="border-b border-slate-100 p-4 dark:border-slate-800"><h2 className="text-sm font-semibold text-slate-900 dark:text-white">储蓄目标</h2></div><div className="space-y-4 p-4">{analysis.goals.map((item) => <div key={item.goal.id}><div className="mb-1 flex justify-between text-sm"><span className="text-slate-700 dark:text-slate-300">{item.goal.name}</span><span className="text-slate-500">{Math.round(item.progress * 100)}%</span></div><div className="h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className={`h-full rounded-full ${item.onTrack ? "bg-emerald-500" : "bg-amber-500"}`} style={{ width: `${Math.round(item.progress * 100)}%` }} /></div><div className="mt-1 flex justify-between text-xs text-slate-400"><span>还差 ¥{item.remaining.toLocaleString()}</span><span>{item.onTrack ? "按当前节奏可达成" : `建议每月存 ¥${item.monthlyNeed.toLocaleString()}`}</span></div></div>)}</div></Card></div>;
 }
+function Metric({ label, value, tone, note }: { label: string; value: string; tone: string; note?: string }) { return <Card><div className="p-4"><div className="text-xs text-slate-500">{label}</div><div className={`mt-1 text-2xl font-bold ${tone}`}>{value}</div>{note && <div className="mt-1 text-xs text-slate-400">{note}</div>}</div></Card>; }
