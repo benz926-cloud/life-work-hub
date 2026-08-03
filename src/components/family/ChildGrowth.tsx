@@ -1,123 +1,17 @@
 "use client";
 
+import { AlertCircle, Sparkles } from "lucide-react";
 import { SectionHeader, Card } from "@/components/shared/SharedComponents";
-import { mockGrowthRecords, mockFamilyMembers } from "@/lib/mock-data";
+import { AITrust } from "@/components/shared/AITrust";
+import { useGrowthReport } from "@/hooks/useAI";
+import { mockFamilyMembers, mockGrowthRecords } from "@/lib/mock-data";
 
 export default function ChildGrowth() {
-  const duoduo = mockFamilyMembers.find((m) => m.role === "child");
-  const latest = mockGrowthRecords[0];
-  const subjects = latest.subject_scores || {};
-
-  return (
-    <div className="space-y-6">
-      <SectionHeader title="📚 朵朵成长" subtitle="一年级 · 7岁" />
-
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Growth metrics */}
-        <Card>
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-            <span className="text-sm font-medium text-gray-900 dark:text-white">📏 身体指标</span>
-          </div>
-          <div className="p-4 grid grid-cols-2 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{latest.height_cm}cm</div>
-              <div className="text-xs text-gray-500">身高</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{latest.weight_kg}kg</div>
-              <div className="text-xs text-gray-500">体重</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{latest.vision_left}</div>
-              <div className="text-xs text-gray-500">左眼视力</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{latest.vision_right}</div>
-              <div className="text-xs text-gray-500">右眼视力</div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Subject scores */}
-        <Card>
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-            <span className="text-sm font-medium text-gray-900 dark:text-white">📝 学科进度</span>
-          </div>
-          <div className="p-4 space-y-3">
-            {Object.entries(subjects).map(([subject, score]) => (
-              <div key={subject}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-700 dark:text-gray-300">{subject}</span>
-                  <span className="text-gray-500">{score}分</span>
-                </div>
-                <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      score >= 90 ? "bg-green-500" : score >= 80 ? "bg-yellow-500" : "bg-red-500"
-                    }`}
-                    style={{ width: `${Math.min(score, 100)}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Milestones */}
-        <Card>
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-            <span className="text-sm font-medium text-gray-900 dark:text-white">🏆 成长里程碑</span>
-          </div>
-          <div className="p-4 space-y-3">
-            {latest.milestones?.map((m, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-                <span className="text-gray-700 dark:text-gray-300">{m}</span>
-              </div>
-            ))}
-            {mockGrowthRecords[1]?.milestones?.map((m, i) => (
-              <div key={`old-${i}`} className="flex items-center gap-2 text-sm opacity-50">
-                <span className="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0" />
-                <span className="text-gray-400 line-through">{m}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      {/* Growth trend */}
-      <Card>
-        <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-          <span className="text-sm font-medium text-gray-900 dark:text-white">📈 身高体重趋势</span>
-        </div>
-        <div className="p-4">
-          <div className="h-40 flex items-end gap-8">
-            {mockGrowthRecords.reverse().map((r, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                <div className="flex gap-2 items-end">
-                  <div
-                    className="w-6 bg-blue-400 rounded-t-sm"
-                    style={{ height: `${r.height_cm || 0}px` }}
-                  />
-                  <div
-                    className="w-6 bg-green-400 rounded-t-sm"
-                    style={{ height: `${(r.weight_kg || 0) * 4}px` }}
-                  />
-                </div>
-                <div className="text-[10px] text-gray-400">{r.date}</div>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-6 mt-4 text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-blue-400 rounded" /> 身高 (cm)
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-green-400 rounded" /> 体重 (kg)
-            </span>
-          </div>
-        </div>
-      </Card>
-    </div>
-  );
+  const child = mockFamilyMembers.find((member) => member.role === "child");
+  const { data: report, enhance, loading, source, degraded, reasons } = useGrowthReport(mockGrowthRecords, child);
+  return <div className="space-y-6"><SectionHeader title={`${report.childName}成长`} subtitle={`${report.age ?? "—"} 岁 · 趋势记录比单次数据更重要`} action={<button onClick={() => void enhance()} disabled={loading} className="flex items-center gap-1.5 rounded-xl bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-60"><Sparkles size={14} className={loading ? "animate-spin" : ""} />AI 总结</button>} /><div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 dark:border-sky-500/20 dark:bg-sky-500/10"><h2 className="text-sm font-semibold text-sky-950 dark:text-sky-100">{report.headline}</h2><p className="mt-2 text-xs leading-5 text-sky-800 dark:text-sky-200">{report.disclaimer}</p></div><AITrust source={source} degraded={degraded} reasons={reasons} />
+    <div className="grid gap-4 lg:grid-cols-3"><Card><div className="border-b border-slate-100 p-4 dark:border-slate-800"><h2 className="text-sm font-semibold text-slate-900 dark:text-white">身体指标</h2></div><div className="grid grid-cols-2 gap-3 p-4">{report.metrics.map((metric) => <div key={metric.key} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><div className="text-lg font-semibold text-sky-700 dark:text-sky-300">{metric.latest ?? "—"}{metric.unit}</div><div className="mt-1 text-xs text-slate-500">{metric.label}{metric.delta != null && ` · 较上次 ${metric.delta > 0 ? "+" : ""}${metric.delta}${metric.unit}`}</div>{metric.bandNote && <p className="mt-1 text-[10px] leading-4 text-slate-400">{metric.bandNote}</p>}</div>)}{report.vision && <><div className="rounded-xl bg-violet-50 p-3 dark:bg-violet-500/10"><div className="text-lg font-semibold text-violet-700 dark:text-violet-300">{report.vision.left ?? "—"}</div><div className="mt-1 text-xs text-slate-500">左眼视力</div></div><div className="rounded-xl bg-violet-50 p-3 dark:bg-violet-500/10"><div className="text-lg font-semibold text-violet-700 dark:text-violet-300">{report.vision.right ?? "—"}</div><div className="mt-1 text-xs text-slate-500">右眼视力</div></div></>}</div>{report.vision?.needsRecheck && <div className="mx-4 mb-4 flex gap-2 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200"><AlertCircle size={15} className="shrink-0" />建议安排一次眼科复查；此提示不构成医学判断。</div>}</Card>
+      <Card><div className="border-b border-slate-100 p-4 dark:border-slate-800"><h2 className="text-sm font-semibold text-slate-900 dark:text-white">学科进度</h2></div><div className="space-y-3 p-4">{report.subjects.map((subject) => <div key={subject.subject}><div className="mb-1 flex justify-between text-sm"><span className="text-slate-700 dark:text-slate-300">{subject.subject}</span><span className="text-slate-500">{subject.scale === "level" ? `${subject.latest}级` : `${subject.latest}分`}</span></div>{subject.scale === "percent" ? <><div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${subject.latest}%` }} /></div><p className="mt-1 text-[10px] text-slate-400">{subject.delta == null ? "等待更多记录" : `较上次 ${subject.delta > 0 ? "+" : ""}${subject.delta} 分`}</p></> : <div className="rounded-lg bg-violet-50 px-2 py-1.5 text-xs text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">等级制记录，不与百分制成绩混合比较。</div>}</div>)}</div></Card>
+      <Card><div className="border-b border-slate-100 p-4 dark:border-slate-800"><h2 className="text-sm font-semibold text-slate-900 dark:text-white">成长里程碑</h2></div><div className="space-y-3 p-4">{report.newMilestones.map((milestone) => <div key={milestone} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><span className="h-2 w-2 rounded-full bg-sky-500" />{milestone}</div>)}{report.newMilestones.length === 0 && <p className="text-sm text-slate-400">本期没有新增里程碑。</p>}</div></Card></div>
+    <Card><div className="border-b border-slate-100 p-4 dark:border-slate-800"><h2 className="text-sm font-semibold text-slate-900 dark:text-white">本期成长摘要</h2></div><div className="grid gap-4 p-4 md:grid-cols-2">{report.sections.map((section) => <section key={section.title} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><h3 className="text-sm font-medium text-slate-900 dark:text-white">{section.title}</h3><p className="mt-1.5 text-xs leading-5 text-slate-500 dark:text-slate-400">{section.text}</p></section>)}</div><div className="border-t border-slate-100 p-4 dark:border-slate-800"><h3 className="text-sm font-semibold text-slate-900 dark:text-white">下一步建议</h3><ul className="mt-2 space-y-1.5 text-xs leading-5 text-slate-600 dark:text-slate-300">{report.suggestions.map((suggestion) => <li key={suggestion}>• {suggestion}</li>)}</ul></div></Card></div>;
 }
