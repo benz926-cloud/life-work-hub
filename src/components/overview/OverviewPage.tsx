@@ -1,9 +1,12 @@
 "use client";
 
 import { StatCard, SectionHeader, Badge, Card } from "@/components/shared/SharedComponents";
-import { mockFamilyMembers, mockHealthRecords, mockApprovals, mockAlerts, mockWorkTasks, mockKPIs, mockAISuggestions, mockTravelPlans } from "@/lib/mock-data";
+import { useAlertsData, useApprovalsData, useFamilyMembersData, useHealthData, useKPIData, useTravelPlansData, useWorkTasksData } from "@/hooks/useData";
+
+const mockAISuggestions: { icon: string; title: string; detail: string; action: string }[] = [];
 
 export default function OverviewPage({ onNavigate }: { onNavigate: (view: string) => void }) {
+  const mockFamilyMembers = useFamilyMembersData().items; const mockHealthRecords = useHealthData().items; const mockApprovals = useApprovalsData().items; const mockAlerts = useAlertsData().items; const mockWorkTasks = useWorkTasksData().items; useKPIData(); const mockTravelPlans = useTravelPlansData().items;
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? "早上好" : hour < 18 ? "下午好" : "晚上好";

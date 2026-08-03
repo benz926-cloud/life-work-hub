@@ -1,20 +1,22 @@
 "use client";
 
 import { SectionHeader, Card, Badge } from "@/components/shared/SharedComponents";
-import { mockHabits, mockCheckins } from "@/lib/mock-data";
+import { useCheckinHabitsData, useCheckinRecordsData } from "@/hooks/useData";
+import { DemoBanner } from "@/components/shared/DataStates";
 
 const categoryIcons: Record<string, string> = {
   fitness: "🏃", learning: "📚", health: "💊", work: "💼", other: "📌",
 };
 
 export default function CheckinsPage() {
+  const habits = useCheckinHabitsData(); const checkins = useCheckinRecordsData();
   return (
     <div className="space-y-6">
-      <SectionHeader title="🎯 打卡习惯" subtitle="今日打卡进度" />
+      <SectionHeader title="🎯 打卡习惯" subtitle="今日打卡进度" /><DemoBanner isDemo={habits.isDemo} />
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockHabits.map((habit) => {
-          const checkin = mockCheckins.find(
+        {habits.items.map((habit) => {
+          const checkin = checkins.items.find(
             (c) => c.habit_id === habit.id && c.date === "2026-08-02"
           );
           return (

@@ -1,13 +1,8 @@
 "use client";
 
 import { SectionHeader, Badge, Card } from "@/components/shared/SharedComponents";
-import { mockAlerts } from "@/lib/mock-data";
-
-const levelConfig = {
-  critical: { label: "严重", color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400" },
-  warning: { label: "警告", color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400" },
-  info: { label: "提示", color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" },
-};
+import { useAlertsData } from "@/hooks/useData";
+import { DemoBanner } from "@/components/shared/DataStates";
 
 const sourceLabels = {
   feishu: "飞书",
@@ -17,13 +12,13 @@ const sourceLabels = {
 };
 
 export default function WorkAlerts() {
-  const critical = mockAlerts.filter((a) => a.level === "critical" && !a.resolved);
-  const warning = mockAlerts.filter((a) => a.level === "warning" && !a.resolved);
-  const info = mockAlerts.filter((a) => a.level === "info" && !a.resolved);
+  const alerts = useAlertsData(); const critical = alerts.items.filter((a) => a.level === "critical" && !a.resolved);
+  const warning = alerts.items.filter((a) => a.level === "warning" && !a.resolved);
+  const info = alerts.items.filter((a) => a.level === "info" && !a.resolved);
 
   return (
     <div className="space-y-6">
-      <SectionHeader
+      <DemoBanner isDemo={alerts.isDemo} /><SectionHeader
         title="🚨 预警监控"
         subtitle={`严重 ${critical.length} · 警告 ${warning.length} · 提示 ${info.length}`}
       />
@@ -39,7 +34,6 @@ export default function WorkAlerts() {
           </div>
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {critical.map((alert) => {
-              const config = levelConfig[alert.level];
               return (
                 <div key={alert.id} className="p-4">
                   <div className="flex items-start gap-3">

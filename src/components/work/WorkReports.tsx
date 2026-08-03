@@ -1,16 +1,18 @@
 "use client";
 
 import { SectionHeader, Card } from "@/components/shared/SharedComponents";
-import { mockKPIs } from "@/lib/mock-data";
+import { useKPIData } from "@/hooks/useData";
+import { DemoBanner } from "@/components/shared/DataStates";
 
 const trendIcon = (t: string) => (t === "up" ? "↑" : t === "down" ? "↓" : "→");
 const trendColor = (t: string) =>
   t === "up" ? "text-green-500" : t === "down" ? "text-red-500" : "text-gray-400";
 
 export default function WorkReports() {
+  const reports = useKPIData();
   return (
     <div className="space-y-6">
-      <SectionHeader
+      <DemoBanner isDemo={reports.isDemo} /><SectionHeader
         title="📊 关键报表"
         subtitle="工业互联网平台 · 今日数据"
         action={
@@ -24,7 +26,7 @@ export default function WorkReports() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {mockKPIs.map((kpi) => (
+        {reports.items.map((kpi) => (
           <Card key={kpi.id}>
             <div className="p-4">
               <div className="text-xs text-gray-500 mb-1">{kpi.name}</div>

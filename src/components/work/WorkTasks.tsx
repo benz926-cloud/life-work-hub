@@ -3,8 +3,8 @@
 import { useRef, useState } from "react";
 import { CalendarDays, GripVertical, MoreHorizontal, Plus, X } from "lucide-react";
 import { SectionHeader, Badge } from "@/components/shared/SharedComponents";
-import { mockWorkTasks } from "@/lib/mock-data";
-import type { WorkTask, TaskStatus } from "@/types";
+import { useWorkTasksData } from "@/hooks/useData";
+import type { TaskStatus } from "@/types";
 
 const columns: { status: TaskStatus; label: string; shortLabel: string; color: string; dot: string }[] = [
   { status: "todo", label: "待办", shortLabel: "待办", color: "bg-amber-50 dark:bg-amber-500/10", dot: "bg-amber-500" },
@@ -15,22 +15,15 @@ const columns: { status: TaskStatus; label: string; shortLabel: string; color: s
 const priorityConfig = { urgent: { label: "紧急", variant: "danger" as const }, normal: { label: "普通", variant: "default" as const }, low: { label: "低优", variant: "info" as const } };
 
 export default function WorkTasks() {
-  const [tasks, setTasks] = useState<WorkTask[]>(() => mockWorkTasks);
+  const { items: tasks, update } = useWorkTasksData();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [overColumn, setOverColumn] = useState<TaskStatus | null>(null);
   const [menuTaskId, setMenuTaskId] = useState<string | null>(null);
   const longPressTimer = useRef<number | null>(null);
 
-  const moveTask = (taskId: string, targetStatus: TaskStatus, beforeId?: string) => {
-    setTasks((current) => {
-      const task = current.find((item) => item.id === taskId);
-      if (!task) return current;
-      const remainder = current.filter((item) => item.id !== taskId);
-      const moved = { ...task, status: targetStatus };
-      if (!beforeId) return [...remainder, moved];
-      const targetIndex = remainder.findIndex((item) => item.id === beforeId);
-      return targetIndex < 0 ? [...remainder, moved] : [...remainder.slice(0, targetIndex), moved, ...remainder.slice(targetIndex)];
-    });
+  const moveTask = (taskId: string, targetStatus: TaskStatus, _beforeId?: string) => {
+    void _beforeId;
+    void update(taskId, { status: targetStatus });
     setMenuTaskId(null);
   };
   const beginDrag = (event: React.DragEvent, taskId: string) => {
