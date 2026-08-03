@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
@@ -17,20 +17,28 @@ interface AuthState {
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const supabaseReady = isSupabaseConfigured();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const supabaseReady = isSupabaseConfigured();
+  const [loading, setLoading] = useState(supabaseReady);
+  // Prevent an older getSession() response from replacing a newer sign-in session.
+  const sessionVersion = useRef(0);
 
   useEffect(() => {
     if (!supabaseReady) {
-      setLoading(false);
       return;
     }
 
     const supabase = getSupabase();
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let active = true;
+    const initialVersion = sessionVersion.current;
+
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      // Password sign-in or an auth event can complete before this initial
+      // request resolves. In that case this is stale state and must not
+      // redirect the freshly authenticated user back to /auth/login.
+      if (!active || initialVersion !== sessionVersion.current) return;
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -38,13 +46,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        sessionVersion.current += 1;
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, [supabaseReady]);
 
   const signIn = useCallback(async (email: string, password: string) => {
@@ -57,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       // Immediately set session in state so redirect doesn't race with onAuthStateChange
       if (data.session) {
+        sessionVersion.current += 1;
         setSession(data.session);
         setUser(data.session.user);
         console.log("[Auth] signIn success, user:", data.session.user?.email);
@@ -97,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error("[Auth] signOut error:", err);
     }
+    sessionVersion.current += 1;
     setUser(null);
     setSession(null);
   }, []);
