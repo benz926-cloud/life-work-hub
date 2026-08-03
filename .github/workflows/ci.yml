@@ -131,4 +131,6 @@ jobs:
           if [ ! -f scripts/check-ownership.sh ]; then
             echo "scripts/check-ownership.sh 尚未合入，跳过"; exit 0
           fi
+          # 守卫脚本自己被改坏过两次，先跑它的回归测试再用它判人
+          [ -f scripts/test-ownership.sh ] && bash scripts/test-ownership.sh
           bash scripts/check-ownership.sh
