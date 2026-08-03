@@ -1,10 +1,7 @@
 "use client";
 
 import { SectionHeader, Card } from "@/components/shared/SharedComponents";
-import { useFamilyMembersData } from "@/hooks/useData";
-import type { SystemIntegration } from "@/types";
-
-const mockIntegrations: SystemIntegration[] = [];
+import { useFamilyMembersData, useSystemIntegrationsData } from "@/hooks/useData";
 
 const integrationLabels: Record<string, string> = {
   feishu: "飞书",
@@ -16,7 +13,7 @@ const integrationLabels: Record<string, string> = {
 };
 
 export default function SettingsPage() {
-  const members = useFamilyMembersData(); const mockFamilyMembers = members.items;
+  const members = useFamilyMembersData(); const integrations = useSystemIntegrationsData(); const mockFamilyMembers = members.items; const mockIntegrations = integrations.items;
   return (
     <div className="space-y-6 max-w-3xl">
       <SectionHeader title="⚙️ 设置" subtitle="系统配置与数据源管理" />

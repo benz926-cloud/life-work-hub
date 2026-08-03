@@ -1,12 +1,15 @@
 "use client";
 
 import { StatCard, SectionHeader, Badge, Card } from "@/components/shared/SharedComponents";
-import { useAlertsData, useApprovalsData, useFamilyMembersData, useHealthData, useKPIData, useTravelPlansData, useWorkTasksData } from "@/hooks/useData";
-
-const mockAISuggestions: { icon: string; title: string; detail: string; action: string }[] = [];
+import { useAlertsData, useApprovalsData, useCheckinHabitsData, useCheckinRecordsData, useChildGrowthData, useFamilyMembersData, useFinanceData, useHealthData, useKPIData, useSavingsGoalsData, useTravelPlansData, useWorkTasksData } from "@/hooks/useData";
+import { useAISuggestions, useFinanceAnalysis, useGrowthReport } from "@/hooks/useAI";
 
 export default function OverviewPage({ onNavigate }: { onNavigate: (view: string) => void }) {
-  const mockFamilyMembers = useFamilyMembersData().items; const mockHealthRecords = useHealthData().items; const mockApprovals = useApprovalsData().items; const mockAlerts = useAlertsData().items; const mockWorkTasks = useWorkTasksData().items; useKPIData(); const mockTravelPlans = useTravelPlansData().items;
+  const family = useFamilyMembersData(); const health = useHealthData(); const approvals = useApprovalsData(); const alerts = useAlertsData(); const tasks = useWorkTasksData(); const travel = useTravelPlansData(); const finance = useFinanceData(); const goals = useSavingsGoalsData(); const habits = useCheckinHabitsData(); const checkins = useCheckinRecordsData(); useKPIData();
+  const child = family.items.find((member) => member.role === "child"); const growthRecords = useChildGrowthData(child?.id);
+  const { data: financeAnalysis } = useFinanceAnalysis(finance.items, goals.items, { monthlyBudget: 10000 }); const { data: growth } = useGrowthReport(growthRecords.items, child);
+  const mockAISuggestions = useAISuggestions({ finance: financeAnalysis, growth, alerts: alerts.items, checkins: { habits: habits.items, records: checkins.items } });
+  const mockFamilyMembers = family.items; const mockHealthRecords = health.items; const mockApprovals = approvals.items; const mockAlerts = alerts.items; const mockWorkTasks = tasks.items; const mockTravelPlans = travel.items;
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? "早上好" : hour < 18 ? "下午好" : "晚上好";
@@ -46,7 +49,7 @@ export default function OverviewPage({ onNavigate }: { onNavigate: (view: string
               {mockAISuggestions.map((s, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                  className={`flex items-center gap-3 rounded-lg p-3 transition-colors cursor-pointer ${s.severity === "urgent" ? "bg-red-50 ring-1 ring-red-200 dark:bg-red-950/20 dark:ring-red-900" : "bg-gray-50 hover:bg-gray-100 dark:bg-gray-800/50 dark:hover:bg-gray-800"}`}
                 >
                   <span className="text-xl">{s.icon}</span>
                   <div className="flex-1 min-w-0">
@@ -57,7 +60,7 @@ export default function OverviewPage({ onNavigate }: { onNavigate: (view: string
                       {s.detail}
                     </div>
                   </div>
-                  <button className="text-xs px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex-shrink-0">
+                  <button onClick={() => onNavigate(s.action ?? "overview")} className={`text-xs px-3 py-1 text-white rounded-lg flex-shrink-0 ${s.severity === "urgent" ? "bg-red-600 hover:bg-red-700" : "bg-blue-500 hover:bg-blue-600"}`}>
                     {s.action}
                   </button>
                 </div>
