@@ -44,8 +44,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
+    const subscriptionVersion = sessionVersion.current;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        // Supabase emits INITIAL_SESSION asynchronously. If password login
+        // completed first, its stale null payload must not undo that session.
+        if (event === "INITIAL_SESSION" && subscriptionVersion !== sessionVersion.current) return;
         sessionVersion.current += 1;
         setSession(session);
         setUser(session?.user ?? null);
@@ -72,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionVersion.current += 1;
         setSession(data.session);
         setUser(data.session.user);
+        setLoading(false);
         console.log("[Auth] signIn success, user:", data.session.user?.email);
       }
       return { error: null };
