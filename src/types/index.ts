@@ -261,7 +261,7 @@ export interface KnowledgeItem {
   saved_content_id?: string;
   type: "checklist" | "quiz" | "action_plan" | "summary";
   title: string;
-  content: any; // JSON structured content
+  content: Record<string, unknown>; // JSON structured content
   created_at: string;
 }
 
@@ -283,8 +283,8 @@ export interface TravelPlan {
   start_date: string;
   end_date: string;
   status: "planning" | "upcoming" | "in_progress" | "completed";
-  itinerary?: any;
-  checklist?: any;
+  itinerary?: Record<string, unknown>;
+  checklist?: Record<string, unknown>;
   budget?: number;
   notes?: string;
   created_at: string;
@@ -297,7 +297,7 @@ export interface SystemIntegration {
   name: "feishu" | "industry_platform" | "italent" | "apple_health" | "keep" | "duolingo";
   connected: boolean;
   last_sync_at?: string;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
   created_at: string;
 }
 
