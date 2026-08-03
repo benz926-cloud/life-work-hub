@@ -22,6 +22,7 @@ import type {
   SavedContent,
   KnowledgeItem,
   SubscriptionRule,
+  SystemIntegration,
 } from "@/types";
 
 // ================================================================
@@ -109,3 +110,4 @@ export function useContentFeeds() { return useTable<ContentFeed>("content_feeds"
 export function useSavedContents() { return useTable<SavedContent>("saved_contents"); }
 export function useKnowledgeItems() { return useTable<KnowledgeItem>("knowledge_items"); }
 export function useSubscriptionRules() { return useTable<SubscriptionRule>("subscription_rules"); }
+export function useIntegrations() { return useTable<SystemIntegration>("system_integrations"); }

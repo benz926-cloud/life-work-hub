@@ -27,6 +27,10 @@ export type { FinanceAnalysis, CategoryStat, Anomaly, GoalProjection, AnalyzeOpt
 export { analyzeGrowth, analyzeGrowthWithAI, GROWTH_DISCLAIMER, GROWTH_VERSION } from "./growth";
 export type { GrowthReport, MetricTrend, SubjectTrend, VisionTrend } from "./growth";
 
+// 7. 主动建议聚合
+export { buildSuggestions, SUGGESTIONS_VERSION } from "./suggestions";
+export type { SuggestionInput } from "./suggestions";
+
 // 6. 旅行攻略
 export { generateTravel, generateTravelLocal, toTravelPlan, checklistProgress, DESTINATIONS, TRAVEL_VERSION } from "./travel";
 export type { TravelDraft, TravelInput, ItineraryDay, TravelChecklist, ChecklistItem, Pace } from "./travel";

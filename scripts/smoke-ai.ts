@@ -15,6 +15,8 @@ import { analyzeFinance, categorizeTransaction } from "@/lib/ai/finance";
 import { analyzeGrowth } from "@/lib/ai/growth";
 import { generateTravelLocal, toTravelPlan, checklistProgress } from "@/lib/ai/travel";
 import { buildUserContext } from "@/hooks/useAI";
+import { buildSuggestions } from "@/lib/ai/suggestions";
+import { mockAlerts, mockHabits, mockCheckins } from "@/lib/mock-data";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -151,6 +153,23 @@ assert(Array.isArray(it.days) && typeof it.days[0].day === "number" && Array.isA
 assert(["documents", "clothing", "kids", "other"].every((k) => Array.isArray(cl[k]) && (cl[k].length === 0 || typeof cl[k][0].done === "boolean")),
   "checklist 结构与 TravelPlan.tsx 渲染契约一致（分组 → {name,done}[]）");
 console.log(`  清单完成度：${checklistProgress(t.checklist).pct}%`);
+
+console.log("\n===== 7. AI 主动建议聚合 =====");
+const sugg = buildSuggestions({
+  finance: fin.data,
+  growth: growth.data,
+  travel: { draft: t, startDate: "2026-08-14" },
+  alerts: mockAlerts,
+  checkins: { habits: mockHabits, records: mockCheckins },
+  now: NOW,
+});
+sugg.forEach((s) => console.log(`  ${s.icon} [${s.severity}] ${s.title} — ${s.detail}${s.impact ? ` (${s.impact.value}${s.impact.unit})` : ""}`));
+assert(sugg.length > 0 && sugg.length <= 6, `建议数量在 1~6 条（实得 ${sugg.length}）`);
+assert(sugg[0].severity === "urgent", `最紧急的排第一（实得 ${sugg[0].severity}）`);
+assert(sugg.some((s) => s.id.startsWith("alert-")), "未处理的关键预警被纳入");
+assert(sugg.some((s) => s.id === "travel-checklist"), "行前清单未完成被纳入");
+assert(new Set(sugg.map((s) => s.id)).size === sugg.length, "建议 id 无重复");
+assert(buildSuggestions({}).length === 0, "无任何数据源时不编造建议");
 
 console.log("\n===== 收件箱 mock 回归（现有数据能否被正确重分类）=====");
 for (const item of mockInboxItems) {
