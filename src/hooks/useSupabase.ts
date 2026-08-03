@@ -27,17 +27,33 @@ import type {
 // ================================================================
 // Generic CRUD hook — wraps Supabase queries with fallback
 // ================================================================
-function useTable<T>(tableName: string) {
-  const ready = isSupabaseConfigured();
+export interface ListOptions {
+  /** 归属列，默认 user_id。child_growth_records 用 family_member_id */
+  scopeColumn?: string;
+  /** 排序。不传的话 PostgREST 不保证顺序，UI 每次刷新排列都可能变 */
+  orderBy?: { column: string; ascending?: boolean };
+  limit?: number;
+}
 
-  const list = useCallback(async (userId?: string): Promise<T[]> => {
+function useTable<T>(tableName: string, defaults: ListOptions = {}) {
+  const ready = isSupabaseConfigured();
+  const { scopeColumn: defScope, orderBy: defOrder, limit: defLimit } = defaults;
+
+  const list = useCallback(async (scopeValue?: string, opts: ListOptions = {}): Promise<T[]> => {
     if (!ready) return [];
-    const q = getSupabase().from(tableName).select("*");
-    if (userId) q.eq("user_id", userId);
+    const scopeColumn = opts.scopeColumn ?? defScope ?? "user_id";
+    const orderBy = opts.orderBy ?? defOrder;
+    const limit = opts.limit ?? defLimit;
+
+    let q = getSupabase().from(tableName).select("*");
+    if (scopeValue) q = q.eq(scopeColumn, scopeValue);
+    if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? false });
+    if (limit) q = q.limit(limit);
+
     const { data, error } = await q;
-    if (error) { console.error(`[DB] ${tableName}.list:`, error); return []; }
+    if (error) { console.error(`[DB] ${tableName}.list:`, error); throw new Error(error.message); }
     return (data as T[]) ?? [];
-  }, [tableName, ready]);
+  }, [tableName, ready, defScope, defOrder, defLimit]);
 
   const getById = useCallback(async (id: string): Promise<T | null> => {
     if (!ready) return null;
@@ -73,22 +89,23 @@ function useTable<T>(tableName: string) {
 // ================================================================
 // Typed hooks for each entity
 // ================================================================
-export function useInbox() { return useTable<InboxItem>("inbox_items"); }
+export function useInbox() { return useTable<InboxItem>("inbox_items", { orderBy: { column: "created_at" } }); }
 export function useApprovals() { return useTable<Approval>("approvals"); }
 export function useAlerts() { return useTable<Alert>("alerts"); }
-export function useWorkTasks() { return useTable<WorkTask>("work_tasks"); }
+export function useWorkTasks() { return useTable<WorkTask>("work_tasks", { orderBy: { column: "created_at" } }); }
 export function useKPIReports() { return useTable<KPIReport>("kpi_reports"); }
 export function useFamilyMembers() { return useTable<FamilyMember>("family_members"); }
-export function useHealthRecords() { return useTable<HealthRecord>("health_records"); }
-export function useChildGrowth() { return useTable<ChildGrowthRecord>("child_growth_records"); }
+export function useHealthRecords() { return useTable<HealthRecord>("health_records", { orderBy: { column: "date" } }); }
+/** 注意：这张表的归属列是 family_member_id，不是 user_id */
+export function useChildGrowth() { return useTable<ChildGrowthRecord>("child_growth_records", { scopeColumn: "family_member_id", orderBy: { column: "date", ascending: true } }); }
 export function useCheckinHabits() { return useTable<CheckinHabit>("checkin_habits"); }
-export function useCheckinRecords() { return useTable<CheckinRecord>("checkin_records"); }
-export function useFinance() { return useTable<FinanceRecord>("finance_records"); }
+export function useCheckinRecords() { return useTable<CheckinRecord>("checkin_records", { orderBy: { column: "date" } }); }
+export function useFinance() { return useTable<FinanceRecord>("finance_records", { orderBy: { column: "date" } }); }
 export function useSavingsGoals() { return useTable<SavingsGoal>("savings_goals"); }
 export function useWardrobe() { return useTable<WardrobeItem>("wardrobe_items"); }
-export function useOutfits() { return useTable<Outfit>("outfits"); }
+export function useOutfits() { return useTable<Outfit>("outfits", { orderBy: { column: "date" } }); }
 export function useTravelPlans() { return useTable<TravelPlan>("travel_plans"); }
-export function useContentFeeds() { return useTable<ContentFeed>("content_feeds"); }
+export function useContentFeeds() { return useTable<ContentFeed>("content_feeds", { orderBy: { column: "published_at" } }); }
 export function useSavedContents() { return useTable<SavedContent>("saved_contents"); }
 export function useKnowledgeItems() { return useTable<KnowledgeItem>("knowledge_items"); }
 export function useSubscriptionRules() { return useTable<SubscriptionRule>("subscription_rules"); }
