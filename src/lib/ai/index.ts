@@ -32,5 +32,5 @@ export { buildSuggestions, SUGGESTIONS_VERSION } from "./suggestions";
 export type { SuggestionInput } from "./suggestions";
 
 // 6. 旅行攻略
-export { generateTravel, generateTravelLocal, toTravelPlan, checklistProgress, normalizeChecklist, normalizeItinerary, DESTINATIONS, TRAVEL_VERSION } from "./travel";
+export { generateTravel, generateTravelLocal, toTravelPlan, checklistProgress, normalizeChecklist, normalizeItinerary, pickUpcomingTrip, DESTINATIONS, TRAVEL_VERSION } from "./travel";
 export type { TravelDraft, TravelInput, ItineraryDay, TravelChecklist, ChecklistItem, Pace } from "./travel";
