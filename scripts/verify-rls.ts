@@ -129,6 +129,51 @@ async function main() {
   const cB = await signIn(B_MAIL, B_PASS);
   const cAnon = createClient(URL_, ANON, { auth: { persistSession: false, autoRefreshToken: false } });
 
+  // ---- 7 项检查，主表与依赖表共用 ----
+  const runChecks = async (name: string, scope: string, rowAId: string, rowBId: string) => {
+    // ① A 能读到自己的行
+    {
+      const { data, error } = await cA.from(name).select("*").eq("id", rowAId);
+      record(name, "A 能读自己的行", !error && (data?.length ?? 0) === 1, error?.message ?? "");
+    }
+    // ② A 读不到 B 的行 —— 最关键的一条
+    {
+      const { data, error } = await cA.from(name).select("*").eq("id", rowBId);
+      record(name, "A 读不到 B 的行", !error && (data?.length ?? 0) === 0,
+        error ? error.message : (data?.length ? `⚠️ 泄露了 ${data.length} 行` : ""));
+    }
+    // ③ A 全表扫描时也看不到 B
+    {
+      const { data, error } = await cA.from(name).select(scope);
+      const leaked = (data ?? []).filter((r: Row) => r[scope] && r[scope] !== uidA).length;
+      record(name, "A 全表扫描无越权行", !error && leaked === 0,
+        error ? error.message : (leaked ? `⚠️ 混入 ${leaked} 行他人数据` : ""));
+    }
+    // ④ A 改不了 B 的行
+    {
+      const { data, error } = await cA.from(name).update({ [scope]: uidA }).eq("id", rowBId).select();
+      record(name, "A 改不了 B 的行", Boolean(error) || (data?.length ?? 0) === 0,
+        !error && data?.length ? "⚠️ 越权写入成功" : "");
+    }
+    // ⑤ A 删不了 B 的行
+    {
+      const { data, error } = await cA.from(name).delete().eq("id", rowBId).select();
+      record(name, "A 删不了 B 的行", Boolean(error) || (data?.length ?? 0) === 0,
+        !error && data?.length ? "⚠️ 越权删除成功" : "");
+    }
+    // ⑥ 未登录读不到任何行
+    {
+      const { data, error } = await cAnon.from(name).select("id").limit(5);
+      record(name, "未登录读不到数据", Boolean(error) || (data?.length ?? 0) === 0,
+        !error && data?.length ? `⚠️ 匿名读到 ${data.length} 行` : "");
+    }
+    // ⑦ B 侧对称抽查
+    {
+      const { data, error } = await cB.from(name).select("*").eq("id", rowAId);
+      record(name, "B 读不到 A 的行", !error && (data?.length ?? 0) === 0, error?.message ?? "");
+    }
+  };
+
   // ---- 逐表验证 ----
   const planted: { table: string; id: string }[] = [];
   for (const t of TABLES) {
@@ -143,47 +188,7 @@ async function main() {
     }
     planted.push({ table: t.name, id: rowA.id }, { table: t.name, id: rowB.id });
 
-    // ① A 能读到自己的行
-    {
-      const { data, error } = await cA.from(t.name).select("*").eq("id", rowA.id);
-      record(t.name, "A 能读自己的行", !error && (data?.length ?? 0) === 1, error?.message ?? "");
-    }
-    // ② A 读不到 B 的行 —— 这是最关键的一条
-    {
-      const { data, error } = await cA.from(t.name).select("*").eq("id", rowB.id);
-      record(t.name, "A 读不到 B 的行", !error && (data?.length ?? 0) === 0,
-        error ? error.message : (data?.length ? `⚠️ 泄露了 ${data.length} 行` : ""));
-    }
-    // ③ A 全表扫描时也看不到 B
-    {
-      const { data, error } = await cA.from(t.name).select(t.scope);
-      const leaked = (data ?? []).filter((r: Row) => r[t.scope] && r[t.scope] !== uidA).length;
-      record(t.name, "A 全表扫描无越权行", !error && leaked === 0,
-        error ? error.message : (leaked ? `⚠️ 混入 ${leaked} 行他人数据` : ""));
-    }
-    // ④ A 改不了 B 的行
-    {
-      const { data, error } = await cA.from(t.name).update({ user_id: uidA }).eq("id", rowB.id).select();
-      record(t.name, "A 改不了 B 的行", Boolean(error) || (data?.length ?? 0) === 0,
-        !error && data?.length ? "⚠️ 越权写入成功" : "");
-    }
-    // ⑤ A 删不了 B 的行
-    {
-      const { data, error } = await cA.from(t.name).delete().eq("id", rowB.id).select();
-      record(t.name, "A 删不了 B 的行", Boolean(error) || (data?.length ?? 0) === 0,
-        !error && data?.length ? "⚠️ 越权删除成功" : "");
-    }
-    // ⑥ 未登录读不到任何行（真 anon key + 无会话，不吞异常）
-    {
-      const { data, error } = await cAnon.from(t.name).select("id").limit(5);
-      const blocked = Boolean(error) || (data?.length ?? 0) === 0;
-      record(t.name, "未登录读不到数据", blocked, !error && data?.length ? `⚠️ 匿名读到 ${data.length} 行` : "");
-    }
-    // ⑦ B 侧对称抽查
-    {
-      const { data, error } = await cB.from(t.name).select("*").eq("id", rowA.id);
-      record(t.name, "B 读不到 A 的行", !error && (data?.length ?? 0) === 0, error?.message ?? "");
-    }
+    await runChecks(t.name, t.scope, rowA.id, rowB.id);
   }
 
   // ---- child_growth_records：归属靠 family_member_id，单独测 ----
@@ -206,6 +211,84 @@ async function main() {
         record("child_growth_records", "未登录读不到数据", Boolean(r3.error) || (r3.data?.length ?? 0) === 0, "");
       }
     }
+  }
+
+  // ---- 依赖表：需要先建父行，恰恰因为麻烦最容易漏策略 ----
+  console.log("\n▸ 依赖表（有外键，需先建父行）");
+
+  // profiles：存邮箱和姓名，是最敏感的一张，行在建账号时已 upsert
+  {
+    console.log("\n▸ profiles");
+    const r1 = await cA.from("profiles").select("*").eq("id", uidA);
+    record("profiles", "A 能读自己的资料", !r1.error && (r1.data?.length ?? 0) === 1, r1.error?.message ?? "");
+    const r2 = await cA.from("profiles").select("*").eq("id", uidB);
+    record("profiles", "A 读不到 B 的资料", !r2.error && (r2.data?.length ?? 0) === 0,
+      r2.data?.length ? "⚠️ 泄露了他人邮箱与姓名" : "");
+    const r3 = await cA.from("profiles").select("id");
+    const leaked = (r3.data ?? []).filter((r: Row) => r.id !== uidA).length;
+    record("profiles", "A 全表扫描无越权行", !r3.error && leaked === 0, leaked ? `⚠️ 混入 ${leaked} 行` : "");
+    const r4 = await cA.from("profiles").update({ name: "hacked" }).eq("id", uidB).select();
+    record("profiles", "A 改不了 B 的资料", Boolean(r4.error) || (r4.data?.length ?? 0) === 0,
+      !r4.error && r4.data?.length ? "⚠️ 越权写入成功" : "");
+    const r5 = await cAnon.from("profiles").select("id").limit(5);
+    record("profiles", "未登录读不到资料", Boolean(r5.error) || (r5.data?.length ?? 0) === 0,
+      !r5.error && r5.data?.length ? `⚠️ 匿名读到 ${r5.data.length} 行` : "");
+  }
+
+  // 其余四张依赖表：先用 admin 建父行，再走同一套 7 项检查
+  const dependent: { name: string; scope: string; make: (uid: string) => Promise<Row | null> }[] = [
+    {
+      name: "outfits", scope: "user_id",
+      make: async (uid) => {
+        const { data: w } = await admin.from("wardrobe_items")
+          .insert({ user_id: uid, name: "RLS 父级衣物", type: "top", color: "white", season: ["summer"], style: ["casual"] })
+          .select().single();
+        if (!w) return null;
+        const { data } = await admin.from("outfits")
+          .insert({ user_id: uid, date: "2026-01-01", items: [w.id] }).select().single();
+        return data;
+      },
+    },
+    {
+      name: "checkin_records", scope: "user_id",
+      make: async (uid) => {
+        const { data: h } = await admin.from("checkin_habits")
+          .insert({ user_id: uid, name: "RLS 父级习惯", category: "other", active: true }).select().single();
+        if (!h) return null;
+        const { data } = await admin.from("checkin_records")
+          .insert({ user_id: uid, habit_id: h.id, date: "2026-01-01", completed: true }).select().single();
+        return data;
+      },
+    },
+    {
+      name: "saved_contents", scope: "user_id",
+      make: async (uid) => {
+        const { data: f } = await admin.from("content_feeds")
+          .insert({ user_id: uid, title: "RLS 父级内容", url: "", platform: "bilibili", author: "t",
+                    published_at: "2026-01-01T00:00:00Z", fetched_at: "2026-01-01T00:00:00Z" }).select().single();
+        if (!f) return null;
+        const { data } = await admin.from("saved_contents")
+          .insert({ user_id: uid, feed_id: f.id, category: "other", converted_to_knowledge: false }).select().single();
+        return data;
+      },
+    },
+    {
+      name: "knowledge_items", scope: "user_id",
+      make: async (uid) => {
+        const { data } = await admin.from("knowledge_items")
+          .insert({ user_id: uid, type: "summary", title: "RLS 测试知识", content: { points: [] } }).select().single();
+        return data;
+      },
+    },
+  ];
+
+  for (const d of dependent) {
+    console.log(`\n▸ ${d.name}`);
+    const rowA = await d.make(uidA);
+    const rowB = await d.make(uidB);
+    if (!rowA || !rowB) { record(d.name, "种子数据准备", false, "父行或本行插入失败"); continue; }
+    planted.push({ table: d.name, id: rowA.id }, { table: d.name, id: rowB.id });
+    await runChecks(d.name, d.scope, rowA.id, rowB.id);
   }
 
   // ---- 汇总 ----
