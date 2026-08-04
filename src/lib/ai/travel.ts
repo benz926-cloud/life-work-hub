@@ -419,9 +419,55 @@ export function toTravelPlan(draft: TravelDraft, input: TravelInput, userId: str
   };
 }
 
-/** 清单完成度，供 UI 上的「准备进度」条使用 */
-export function checklistProgress(checklist: TravelChecklist): { done: number; total: number; pct: number } {
-  const all = [...checklist.documents, ...checklist.clothing, ...checklist.kids, ...checklist.other];
+// ---------------------------------------------------------------
+// 归一化 —— 数据库里的 itinerary / checklist 是 JSON 列，可能是 null、
+// 可能只有一半字段（用户刚建计划还没生成行程）。mock 数据永远是完整的，
+// 所以这些空值只有接了真实数据库才会暴露。以下三个函数负责兜住。
+// ---------------------------------------------------------------
+
+const EMPTY_CHECKLIST: TravelChecklist = { documents: [], clothing: [], kids: [], other: [] };
+
+/** 任何形状的输入都转成完整的 TravelChecklist，缺的分组补空数组 */
+export function normalizeChecklist(input: unknown): TravelChecklist {
+  if (!input || typeof input !== "object") return { ...EMPTY_CHECKLIST };
+  const src = input as Record<string, unknown>;
+  const pick = (k: keyof TravelChecklist): ChecklistItem[] => {
+    const v = src[k];
+    if (!Array.isArray(v)) return [];
+    return v
+      .filter((x): x is Record<string, unknown> => Boolean(x) && typeof x === "object")
+      .map((x) => ({ name: String(x.name ?? ""), done: Boolean(x.done) }))
+      .filter((x) => x.name);
+  };
+  return { documents: pick("documents"), clothing: pick("clothing"), kids: pick("kids"), other: pick("other") };
+}
+
+/** 同上，兜住 itinerary 为 null / 缺 days / days 不是数组的情况 */
+export function normalizeItinerary(input: unknown): { days: ItineraryDay[]; tips: string[] } {
+  if (!input || typeof input !== "object") return { days: [], tips: [] };
+  const src = input as Record<string, unknown>;
+  const days = Array.isArray(src.days)
+    ? src.days
+        .filter((d): d is Record<string, unknown> => Boolean(d) && typeof d === "object")
+        .map((d, i) => ({
+          day: typeof d.day === "number" ? d.day : i + 1,
+          title: String(d.title ?? `第${i + 1}天`),
+          activities: Array.isArray(d.activities) ? d.activities.map(String) : [],
+          area: typeof d.area === "string" ? d.area : undefined,
+          note: typeof d.note === "string" ? d.note : undefined,
+        }))
+    : [];
+  const tips = Array.isArray(src.tips) ? src.tips.map(String) : [];
+  return { days, tips };
+}
+
+/**
+ * 清单完成度，供 UI 上的「准备进度」条使用。
+ * 入参放宽到 unknown —— 组件拿到的是数据库 JSON 列，形状不保证。
+ */
+export function checklistProgress(checklist: unknown): { done: number; total: number; pct: number } {
+  const c = normalizeChecklist(checklist);
+  const all = [...c.documents, ...c.clothing, ...c.kids, ...c.other];
   const done = all.filter((i) => i.done).length;
   return { done, total: all.length, pct: all.length ? Math.round((done / all.length) * 100) : 0 };
 }
