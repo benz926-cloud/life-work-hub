@@ -13,7 +13,7 @@ import { rankContentLocal } from "@/lib/ai/content";
 import { recommendOutfitsLocal } from "@/lib/ai/outfit";
 import { analyzeFinance, categorizeTransaction } from "@/lib/ai/finance";
 import { analyzeGrowth } from "@/lib/ai/growth";
-import { generateTravelLocal, toTravelPlan, checklistProgress } from "@/lib/ai/travel";
+import { generateTravelLocal, toTravelPlan, checklistProgress, normalizeChecklist, normalizeItinerary } from "@/lib/ai/travel";
 import { buildUserContext } from "@/hooks/useAI";
 import { buildSuggestions } from "@/lib/ai/suggestions";
 import { mockAlerts, mockHabits, mockCheckins } from "@/lib/mock-data";
@@ -176,6 +176,27 @@ for (const item of mockInboxItems) {
   const r = parseIntentLocal(item.content, NOW).data;
   const flag = r.category === item.category ? "✓" : "≠";
   console.log(`  ${flag} ${item.content.slice(0, 24)} → ${r.category} (mock: ${item.category})`);
+}
+
+
+// ===== 8. 空值兜底（接真实数据库后才会遇到的形状）=====
+console.log("\n===== 8. itinerary / checklist 空值兜底 =====");
+{
+  const bad: unknown[] = [null, undefined, {}, { days: null }, { documents: null }, "not-an-object", 42,
+    { days: [{ title: "缺 day 和 activities" }] },
+    { documents: [{ name: "有名字" }, { done: true }, null] }];
+  let crashed = 0;
+  for (const b of bad) {
+    try { checklistProgress(b); normalizeItinerary(b); normalizeChecklist(b); }
+    catch { crashed++; console.error("   ✗ 崩在:", JSON.stringify(b)); }
+  }
+  assert(crashed === 0, `9 种畸形输入全部不崩（实际崩 ${crashed} 次）`);
+  assert(checklistProgress(null).pct === 0, "null 清单进度为 0");
+  assert(normalizeItinerary(null).days.length === 0, "null 行程返回空数组");
+  const partial = normalizeChecklist({ documents: [{ name: "身份证", done: true }, { done: false }] });
+  assert(partial.documents.length === 1 && partial.clothing.length === 0,
+    "残缺分组被补全、无名条目被丢弃");
+  assert(normalizeItinerary({ days: [{ title: "x" }] }).days[0].day === 1, "缺 day 字段时按序号补");
 }
 
 console.log(`\n${failed === 0 ? "✅ 全部通过" : `❌ ${failed} 项失败`}\n`);
