@@ -13,7 +13,7 @@ import { rankContentLocal } from "@/lib/ai/content";
 import { recommendOutfitsLocal } from "@/lib/ai/outfit";
 import { analyzeFinance, categorizeTransaction } from "@/lib/ai/finance";
 import { analyzeGrowth } from "@/lib/ai/growth";
-import { generateTravelLocal, toTravelPlan, checklistProgress, normalizeChecklist, normalizeItinerary } from "@/lib/ai/travel";
+import { generateTravelLocal, toTravelPlan, checklistProgress, normalizeChecklist, normalizeItinerary, pickUpcomingTrip } from "@/lib/ai/travel";
 import { buildUserContext } from "@/hooks/useAI";
 import { buildSuggestions } from "@/lib/ai/suggestions";
 import { mockAlerts, mockHabits, mockCheckins } from "@/lib/mock-data";
@@ -197,6 +197,21 @@ console.log("\n===== 8. itinerary / checklist 空值兜底 =====");
   assert(partial.documents.length === 1 && partial.clothing.length === 0,
     "残缺分组被补全、无名条目被丢弃");
   assert(normalizeItinerary({ days: [{ title: "x" }] }).days[0].day === 1, "缺 day 字段时按序号补");
+}
+
+console.log("\n===== 9. 挑「即将出行」而不是撞运气 =====");
+{
+  const ps = [
+    { start_date: "2026-01-01", end_date: "2026-01-05" },
+    { start_date: "2026-09-10", end_date: "2026-09-15" },
+    { start_date: "2026-08-14", end_date: "2026-08-18" },
+  ];
+  assert(pickUpcomingTrip(ps, NOW)?.start_date === "2026-08-14", "取最近的一次未来行程");
+  const past = [{ start_date: "2025-01-01", end_date: "2025-01-05" }, { start_date: "2026-01-01", end_date: "2026-01-05" }];
+  assert(pickUpcomingTrip(past, NOW)?.start_date === "2026-01-01", "全是过去行程时取最近结束的");
+  assert(pickUpcomingTrip([], NOW) === undefined, "空列表返回 undefined 而不是崩");
+  const ongoing = [{ start_date: "2026-08-01", end_date: "2026-08-10" }];
+  assert(pickUpcomingTrip(ongoing, NOW)?.start_date === "2026-08-01", "进行中的行程算未来");
 }
 
 console.log(`\n${failed === 0 ? "✅ 全部通过" : `❌ ${failed} 项失败`}\n`);

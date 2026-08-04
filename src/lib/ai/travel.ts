@@ -471,3 +471,21 @@ export function checklistProgress(checklist: unknown): { done: number; total: nu
   const done = all.filter((i) => i.done).length;
   return { done, total: all.length, pct: all.length ? Math.round((done / all.length) * 100) : 0 };
 }
+
+/**
+ * 从计划列表里挑出「即将出行」的那一个。
+ * 组件原来用 items[0] 撞运气 —— 数据库不保证顺序，撞到哪条算哪条。
+ * 规则：优先最近的一次未来行程；全是过去的行程就取最近结束的那次。
+ */
+export function pickUpcomingTrip<T extends { start_date: string; end_date?: string }>(
+  plans: T[],
+  now = new Date()
+): T | undefined {
+  if (!plans?.length) return undefined;
+  const today = now.toISOString().slice(0, 10);
+  const future = plans
+    .filter((p) => (p.end_date ?? p.start_date) >= today)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date));
+  if (future.length) return future[0];
+  return [...plans].sort((a, b) => b.start_date.localeCompare(a.start_date))[0];
+}
