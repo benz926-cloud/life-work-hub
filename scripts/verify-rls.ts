@@ -101,7 +101,15 @@ async function main() {
     const { data: list, error } = await admin.auth.admin.listUsers();
     if (error) throw new Error(`listUsers 失败：${error.message}`);
     const found = list.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
-    if (found) { console.log(`  已存在 ${email}`); return found.id; }
+    if (found) {
+      // 账号可能是上一轮或别人建的，密码未必等于 env 里这个。
+      // 用 admin API 强制对齐，否则下一步会报 Invalid login credentials ——
+      // 而那个报错看起来像 anon key 不对，很容易把人引到错误的排查方向。
+      const { error: e } = await admin.auth.admin.updateUserById(found.id, { password, email_confirm: true });
+      if (e) throw new Error(`重置 ${email} 密码失败：${e.message}`);
+      console.log(`  已存在 ${email}（已重置密码以确保可登录）`);
+      return found.id;
+    }
     const { data, error: e2 } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
     if (e2 || !data.user) throw new Error(`创建 ${email} 失败：${e2?.message}`);
     console.log(`  已创建 ${email}`);
