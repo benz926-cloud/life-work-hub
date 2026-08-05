@@ -23,6 +23,7 @@ import type {
   KnowledgeItem,
   SubscriptionRule,
   SystemIntegration,
+  AgentOutput,
 } from "@/types";
 
 // ================================================================
@@ -110,4 +111,5 @@ export function useContentFeeds() { return useTable<ContentFeed>("content_feeds"
 export function useSavedContents() { return useTable<SavedContent>("saved_contents", { orderBy: { column: "saved_at" } }); }
 export function useKnowledgeItems() { return useTable<KnowledgeItem>("knowledge_items", { orderBy: { column: "created_at" } }); }
 export function useSubscriptionRules() { return useTable<SubscriptionRule>("subscription_rules", { orderBy: { column: "created_at", ascending: true } }); }
+export function useAgentOutputs() { return useTable<AgentOutput>("agent_outputs", { orderBy: { column: "occurred_at" } }); }
 export function useIntegrations() { return useTable<SystemIntegration>("system_integrations", { orderBy: { column: "created_at", ascending: true } }); }

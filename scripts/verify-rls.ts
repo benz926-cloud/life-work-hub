@@ -84,6 +84,7 @@ const TABLES: { name: string; scope: string; row: (uid: string) => Row }[] = [
   { name: "subscription_rules", scope: "user_id", row: (u) => ({ user_id: u, platform: "bilibili", category: "other", keywords: ["t"], active: true }) },
   { name: "travel_plans", scope: "user_id", row: (u) => ({ user_id: u, destination: "RLS 测试目的地", start_date: "2026-01-01", end_date: "2026-01-02", status: "planning" }) },
   { name: "system_integrations", scope: "user_id", row: (u) => ({ user_id: u, name: "feishu", connected: false }) },
+  { name: "agent_outputs", scope: "user_id", row: (u) => ({ user_id: u, kind: "brief", source: "manual", title: "RLS 测试卡片", severity: "info", status: "new" }) },
 ];
 
 async function main() {

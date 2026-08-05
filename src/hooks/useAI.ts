@@ -23,6 +23,8 @@ import { analyzeFinance, analyzeFinanceWithAI, type FinanceAnalysis, type Analyz
 import { analyzeGrowth, analyzeGrowthWithAI, type GrowthReport } from "@/lib/ai/growth";
 import { generateTravel, generateTravelLocal, type TravelDraft, type TravelInput } from "@/lib/ai/travel";
 import { buildSuggestions, type SuggestionInput } from "@/lib/ai/suggestions";
+import { buildCockpit, type CockpitOptions, type CockpitView } from "@/lib/ai/cockpit";
+import type { AgentOutput } from "@/types";
 import type { Recommendation } from "@/lib/ai/types";
 
 interface AIState<T> {
@@ -264,5 +266,18 @@ export function useAISuggestions(input: SuggestionInput): Recommendation[] {
   return useMemo(
     () => buildSuggestions({ finance, growth, travel, alerts, checkins, now }),
     [finance, growth, travel, alerts, checkins, now]
+  );
+}
+
+
+// ---------------------------------------------------------------
+// 8. 工作驾驶舱
+// ---------------------------------------------------------------
+/** 把 agent_outputs 收敛成四张卡 + 顶部结论。纯计算，无副作用。 */
+export function useCockpit(items: AgentOutput[], opts: CockpitOptions = {}): CockpitView {
+  const { now, includeHandled, limitPerSection, staleHours } = opts;
+  return useMemo(
+    () => buildCockpit(items, { now, includeHandled, limitPerSection, staleHours }),
+    [items, now, includeHandled, limitPerSection, staleHours]
   );
 }
