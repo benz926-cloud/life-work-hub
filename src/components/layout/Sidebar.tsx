@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import {
-  LayoutDashboard, Inbox, Radio, FileCheck, BarChart3, Bell, CheckSquare, Heart,
+  LayoutDashboard, Inbox, Radio, FileCheck, BarChart3, Bell, CheckSquare, Heart, Gauge,
   GraduationCap, Plane, Shirt, Wallet, Target, Settings, ChevronLeft,
 } from "lucide-react";
 import { SIDEBAR_NAV, type NavSection } from "@/lib/navigation";
@@ -25,6 +25,7 @@ export default function Sidebar({ activeView, onNavigate, collapsed, onToggle }:
       </div>
       <nav aria-label="主导航" className="flex-1 overflow-y-auto px-2 py-3">
         <div className="space-y-4">
+          <a href="/cockpit" className={`group relative mb-3 flex w-full items-center rounded-xl py-2 text-sm transition-all duration-200 ${collapsed ? "justify-center px-2" : "gap-3 px-3"} text-slate-600 hover:bg-sky-50 hover:text-sky-700 dark:text-slate-400 dark:hover:bg-sky-500/10 dark:hover:text-sky-300`} title={collapsed ? "工作驾驶舱" : undefined}><Gauge size={18} /><span className={`min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left font-semibold transition-all duration-300 ${collapsed ? "w-0 opacity-0" : "w-auto opacity-100"}`}>工作驾驶舱</span>{collapsed && <span className="pointer-events-none absolute left-[calc(100%+0.75rem)] hidden whitespace-nowrap rounded-lg bg-slate-900 px-2 py-1 text-xs text-white shadow-lg group-hover:block">工作驾驶舱</span>}</a>
           {(Object.entries(SIDEBAR_NAV) as [NavSection, typeof SIDEBAR_NAV[NavSection]][]).map(([section, items]) => (
             <div key={section}>
               <div className={`mb-1 h-4 overflow-hidden px-3 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 transition-all duration-300 dark:text-slate-500 ${collapsed ? "opacity-0" : "opacity-100"}`}>{sectionLabels[section]}</div>

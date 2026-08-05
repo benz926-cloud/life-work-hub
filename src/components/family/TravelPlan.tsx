@@ -5,19 +5,19 @@ import { AlertTriangle, Sparkles, Wallet } from "lucide-react";
 import { Card, SectionHeader } from "@/components/shared/SharedComponents";
 import { AITrust } from "@/components/shared/AITrust";
 import { useTravelGenerator } from "@/hooks/useAI";
-import { checklistProgress, type ItineraryDay, type TravelChecklist } from "@/lib/ai";
+import { checklistProgress, normalizeChecklist, normalizeItinerary, pickUpcomingTrip, type TravelChecklist } from "@/lib/ai";
 import { useFamilyMembersData, useTravelPlansData } from "@/hooks/useData";
 import { EmptyState } from "@/components/shared/DataStates";
 
 const checklistLabels: { key: keyof TravelChecklist; label: string }[] = [{ key: "documents", label: "📄 证件" }, { key: "clothing", label: "👔 衣物" }, { key: "kids", label: "👶 儿童" }, { key: "other", label: "🎒 其他" }];
 
 export default function TravelPlan() {
-  const plans = useTravelPlansData(); const members = useFamilyMembersData(); const mockFamilyMembers = members.items; const plan = plans.items[0];
+  const plans = useTravelPlansData(); const members = useFamilyMembersData(); const mockFamilyMembers = members.items; const plan = pickUpcomingTrip(plans.items);
   const { data: draft, generate, loading, source, degraded, reasons } = useTravelGenerator();
   useEffect(() => { if (plan) void generate({ destination: plan.destination, startDate: plan.start_date, endDate: plan.end_date, travelers: members.items, budget: plan.budget, pace: "balanced" }); }, [generate, plan, members.items]);
   if (!plan) return <EmptyState title="还没有旅行计划，创建一个目的地开始准备吧。" />;
-  const itinerary = (draft?.itinerary ?? plan.itinerary) as { days: ItineraryDay[]; tips: string[] };
-  const checklist = (draft?.checklist ?? plan.checklist) as TravelChecklist;
+  const itinerary = normalizeItinerary(draft?.itinerary ?? plan.itinerary);
+  const checklist = normalizeChecklist(draft?.checklist ?? plan.checklist);
   const progress = checklistProgress(checklist);
   const days = draft?.days ?? itinerary.days.length;
   const toggleChecklist = (section: keyof TravelChecklist, name: string) => {
