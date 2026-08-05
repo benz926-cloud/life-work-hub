@@ -27,6 +27,10 @@ export type { FinanceAnalysis, CategoryStat, Anomaly, GoalProjection, AnalyzeOpt
 export { analyzeGrowth, analyzeGrowthWithAI, GROWTH_DISCLAIMER, GROWTH_VERSION } from "./growth";
 export type { GrowthReport, MetricTrend, SubjectTrend, VisionTrend } from "./growth";
 
+// 8. 工作驾驶舱
+export { buildCockpit, sortOutputs, cardSubtitle, normalizeBrief, normalizeApproval, normalizeMessage, normalizeReport, COCKPIT_VERSION } from "./cockpit";
+export type { CockpitView, CockpitSection, CockpitOptions, BriefDetail, ApprovalDetail, MessageDetail, ReportDetail } from "./cockpit";
+
 // 7. 主动建议聚合
 export { buildSuggestions, SUGGESTIONS_VERSION } from "./suggestions";
 export type { SuggestionInput } from "./suggestions";

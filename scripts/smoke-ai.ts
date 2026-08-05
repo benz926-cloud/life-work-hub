@@ -16,6 +16,8 @@ import { analyzeGrowth } from "@/lib/ai/growth";
 import { generateTravelLocal, toTravelPlan, checklistProgress, normalizeChecklist, normalizeItinerary, pickUpcomingTrip } from "@/lib/ai/travel";
 import { buildUserContext } from "@/hooks/useAI";
 import { buildSuggestions } from "@/lib/ai/suggestions";
+import { buildCockpit, cardSubtitle, normalizeApproval, normalizeMessage, normalizeReport, normalizeBrief } from "@/lib/ai/cockpit";
+import type { AgentOutput } from "@/types";
 import { mockAlerts, mockHabits, mockCheckins } from "@/lib/mock-data";
 
 let failed = 0;
@@ -212,6 +214,59 @@ console.log("\n===== 9. 挑「即将出行」而不是撞运气 =====");
   assert(pickUpcomingTrip([], NOW) === undefined, "空列表返回 undefined 而不是崩");
   const ongoing = [{ start_date: "2026-08-01", end_date: "2026-08-10" }];
   assert(pickUpcomingTrip(ongoing, NOW)?.start_date === "2026-08-01", "进行中的行程算未来");
+}
+
+console.log("\n===== 10. 工作驾驶舱 =====");
+{
+  const mk = (o: Partial<AgentOutput>): AgentOutput => ({
+    id: Math.random().toString(36).slice(2), user_id: "u1", kind: "brief", source: "email",
+    title: "t", severity: "info", status: "new", created_at: "2026-08-04T08:00:00Z",
+    updated_at: "2026-08-04T08:00:00Z", ...o,
+  } as AgentOutput);
+
+  const rows: AgentOutput[] = [
+    mk({ kind: "approval", source: "oa", title: "报销审批 - 李明", severity: "urgent", occurred_at: "2026-08-04T09:00:00Z",
+         detail: { applicant: "李明", amount: 2800, due_date: "2026-08-05", ai_suggestion: "建议通过", ai_concerns: ["发票日期差2天"] } }),
+    mk({ kind: "approval", source: "oa", title: "采购审批 - 王芳", severity: "attention", occurred_at: "2026-08-04T08:00:00Z", detail: { applicant: "王芳", amount: 15000 } }),
+    mk({ kind: "message", source: "feishu", title: "产线群有人@你", severity: "urgent", occurred_at: "2026-08-04T10:00:00Z",
+         detail: { chat_name: "产线智能化项目群", mentioned_me: true, unread_count: 12, key_points: ["3号线方案待确认"], needs_reply: true } }),
+    mk({ kind: "brief", source: "email", title: "供应商合同续签", severity: "attention", occurred_at: "2026-08-04T07:00:00Z",
+         detail: { from: "supplier@example.com", needs_reply: true, deadline: "2026-08-05", key_points: ["条款有变更"] } }),
+    mk({ kind: "report", source: "bitable", title: "本周汇报进度", severity: "info", occurred_at: "2026-08-04T06:00:00Z",
+         detail: { period: "2026-W32", completed_count: 5, total_count: 8, pending: [{ who: "王芳", what: "Q3报表", overdue_days: 2 }] } }),
+    mk({ kind: "approval", source: "oa", title: "已处理的历史单", severity: "urgent", status: "done", occurred_at: "2026-08-03T09:00:00Z" }),
+  ];
+
+  const NOW_C = new Date("2026-08-04T12:00:00Z");
+  const v = buildCockpit(rows, { now: NOW_C });
+  console.log(`  ${v.headline}`);
+  v.sections.forEach((sec) => console.log(`    ${sec.icon} ${sec.label}: ${sec.items.length} 条（${sec.urgentCount} 紧急）`));
+  v.sections.flatMap((s) => s.items).slice(0, 3).forEach((o) => console.log(`      · ${o.title} — ${cardSubtitle(o)}`));
+
+  assert(v.sections.length === 4, "四张卡都在");
+  assert(v.urgentCount === 2, `紧急数=2，已处理的不计入（实得 ${v.urgentCount}）`);
+  assert(v.sections[0].items[0].severity === "urgent", "每组内紧急排最前");
+  assert(!v.sections.flatMap((s) => s.items).some((o) => o.status === "done"), "默认过滤已处理项");
+  assert(buildCockpit(rows, { now: NOW_C, includeHandled: true }).urgentCount === 3, "includeHandled 后计入已处理");
+  assert(v.headline.includes("2 件"), `顶部结论点出紧急件数（实得「${v.headline}」）`);
+  assert(buildCockpit([], { now: NOW_C }).headline.includes("还没有数据"), "空表给出可操作提示而不是空白");
+  assert(buildCockpit([], { now: NOW_C }).sections.length === 4, "空表仍返回四张卡（各自显示空态）");
+
+  // 陈旧提醒
+  const stale = buildCockpit([mk({ created_at: "2026-08-03T00:00:00Z" })], { now: NOW_C });
+  assert(stale.isStale, "超过 12 小时未更新会标记 stale");
+  assert(!buildCockpit(rows, { now: NOW_C }).isStale, "刚更新过不标记 stale");
+
+  // detail 是 jsonb —— 重演旅行页那次崩溃的形状
+  const junk: unknown[] = [null, undefined, {}, "字符串", 42, [], { pending: "不是数组" }, { key_points: [1, 2, null] }];
+  let crashed = 0;
+  for (const j of junk) {
+    try { normalizeApproval(j); normalizeMessage(j); normalizeReport(j); normalizeBrief(j); cardSubtitle(mk({ kind: "approval", detail: j })); }
+    catch { crashed++; console.error("   ✗ 崩在:", JSON.stringify(j)); }
+  }
+  assert(crashed === 0, `8 种畸形 detail 全部不崩（实际崩 ${crashed} 次）`);
+  assert(normalizeReport({ pending: "不是数组" }).pending.length === 0, "pending 非数组时降级为空");
+  assert(normalizeMessage(null).unreadCount === 0, "null detail 给出安全默认值");
 }
 
 console.log(`\n${failed === 0 ? "✅ 全部通过" : `❌ ${failed} 项失败`}\n`);
