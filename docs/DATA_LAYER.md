@@ -55,6 +55,7 @@ interface Collection<T> {
 `useFinanceData` `useSavingsGoalsData` `useWardrobeData` `useOutfitsData`
 `useTravelPlansData` `useContentFeedsData` `useSubscriptionRulesData`
 `useSystemIntegrationsData` `useChildGrowthData(familyMemberId)`
+`useAgentOutputsData`（工作驾驶舱，**无 mock**——空表是正常状态）
 
 ## AI 主动建议不是一张表
 

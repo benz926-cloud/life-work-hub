@@ -320,3 +320,29 @@ export interface StatCardProps {
   change?: string;
   href?: string;
 }
+
+// ===== Agent Outputs（工作驾驶舱）=====
+// WorkBuddy 把飞书/邮件/OA 等结果写进这张表，应用只读。
+// detail 的形状由 kind 决定，约定见 docs/AGENT_OUTPUTS.md
+export type AgentOutputKind = "brief" | "approval" | "message" | "report" | "task" | "content";
+export type AgentOutputSource = "feishu" | "email" | "oa" | "bitable" | "xiaohongshu" | "manual";
+export type AgentOutputSeverity = "urgent" | "attention" | "info";
+export type AgentOutputStatus = "new" | "read" | "done" | "dismissed";
+
+export interface AgentOutput {
+  id: string;
+  user_id: string;
+  kind: AgentOutputKind;
+  source: AgentOutputSource;
+  title: string;
+  summary?: string;
+  /** jsonb —— 运行时形状不保证，一律走 cockpit.ts 的归一化函数再用 */
+  detail?: unknown;
+  severity: AgentOutputSeverity;
+  action_url?: string;
+  status: AgentOutputStatus;
+  external_id?: string;
+  occurred_at?: string;
+  created_at: string;
+  updated_at: string;
+}

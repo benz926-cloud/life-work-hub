@@ -21,7 +21,7 @@ import {
   useInbox, useApprovals, useAlerts, useWorkTasks, useKPIReports,
   useFamilyMembers, useHealthRecords, useChildGrowth, useCheckinHabits,
   useCheckinRecords, useFinance, useSavingsGoals, useWardrobe, useOutfits,
-  useTravelPlans, useContentFeeds, useSubscriptionRules, useIntegrations,
+  useTravelPlans, useContentFeeds, useSubscriptionRules, useIntegrations, useAgentOutputs,
   type ListOptions,
 } from "./useSupabase";
 import {
@@ -33,7 +33,7 @@ import {
 import type {
   InboxItem, Approval, Alert, WorkTask, KPIReport, FamilyMember, HealthRecord,
   ChildGrowthRecord, CheckinHabit, CheckinRecord, FinanceRecord, SavingsGoal,
-  WardrobeItem, Outfit, TravelPlan, ContentFeed, SubscriptionRule, SystemIntegration,
+  WardrobeItem, Outfit, TravelPlan, ContentFeed, SubscriptionRule, SystemIntegration, AgentOutput,
 } from "@/types";
 
 export type DataSource = "supabase" | "mock";
@@ -180,6 +180,11 @@ export function useOutfitsData() { return useCollection<Outfit>(useOutfits() as 
 export function useTravelPlansData() { return useCollection<TravelPlan>(useTravelPlans() as any, { mock: mockTravelPlans }); }
 export function useContentFeedsData() { return useCollection<ContentFeed>(useContentFeeds() as any, { mock: mockContentFeeds }); }
 export function useSubscriptionRulesData() { return useCollection<SubscriptionRule>(useSubscriptionRules() as any, { mock: mockSubscriptionRules }); }
+/**
+ * 工作驾驶舱的卡片数据。没有 mock —— 这张表天生就是空的（WorkBuddy 没跑就没数据），
+ * 空态是正常状态而不是异常，不该拿假数据糊上去。
+ */
+export function useAgentOutputsData() { return useCollection<AgentOutput>(useAgentOutputs() as any, { mock: [] }); }
 export function useSystemIntegrationsData() { return useCollection<SystemIntegration>(useIntegrations() as any, { mock: mockIntegrations }); }
 
 /**
