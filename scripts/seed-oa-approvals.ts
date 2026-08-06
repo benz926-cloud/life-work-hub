@@ -218,3 +218,8 @@ async function main() {
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
+
+// 没有 import/export 的 .ts 会被 TypeScript 当作「全局脚本」而不是模块，
+// 顶层 const 会进全局作用域 —— 两个 seed 脚本因此撞了同名变量，tsc 直接报
+// TS2451 Cannot redeclare。加一行空导出把它变回模块即可。
+export {};
